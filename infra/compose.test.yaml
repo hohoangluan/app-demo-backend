@@ -1,0 +1,23 @@
+name: app-demo-test
+
+services:
+  postgres-test:
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    restart: "no"
+    environment:
+      POSTGRES_DB: ${TEST_POSTGRES_DB:-app_demo_test}
+      POSTGRES_USER: ${TEST_POSTGRES_USER:-app_demo_test}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-app_demo_test}
+    ports:
+      - "127.0.0.1:${TEST_POSTGRES_PORT:-55432}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "${TEST_POSTGRES_USER:-app_demo_test}" -d "${TEST_POSTGRES_DB:-app_demo_test}"
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 3s
+    stop_grace_period: 10s

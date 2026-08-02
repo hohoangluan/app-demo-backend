@@ -1,0 +1,939 @@
+openapi: 3.1.0
+info:
+  title: App Communication Server Public API
+  version: 0.1.0
+paths:
+  /api/v1/service/ride/quote:
+    post:
+      summary: Ride Quote
+      description: Describe the ride quote endpoint contract.
+      operationId: ride_quote_api_v1_service_ride_quote_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideQuoteRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/ride/confirm:
+    post:
+      summary: Ride Confirm
+      description: Describe the ride confirmation endpoint contract.
+      operationId: ride_confirm_api_v1_service_ride_confirm_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideConfirmRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/music/play:
+    post:
+      summary: Music Play
+      description: Describe the music play endpoint contract.
+      operationId: music_play_api_v1_service_music_play_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MusicPlayRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/music/stop:
+    post:
+      summary: Music Stop
+      description: Describe the music stop endpoint contract.
+      operationId: music_stop_api_v1_service_music_stop_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MusicStopRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/music/volume:
+    post:
+      summary: Music Volume
+      description: Describe the music volume endpoint contract.
+      operationId: music_volume_api_v1_service_music_volume_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MusicVolumeRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/navigation/start:
+    post:
+      summary: Navigation Start
+      description: Describe the navigation start endpoint contract.
+      operationId: navigation_start_api_v1_service_navigation_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NavigationStartRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/navigation/stop:
+    post:
+      summary: Navigation Stop
+      description: Describe the navigation stop endpoint contract.
+      operationId: navigation_stop_api_v1_service_navigation_stop_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NavigationStopRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/emergency/call:
+    post:
+      summary: Emergency Call
+      description: Describe the emergency call endpoint contract.
+      operationId: emergency_call_api_v1_service_emergency_call_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyCallRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/contact/call:
+    post:
+      summary: Contact Call
+      description: Describe the contact call endpoint contract.
+      operationId: contact_call_api_v1_service_contact_call_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCallRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/requests/{request_id}:
+    get:
+      summary: Request Status
+      description: Describe the Public Request Status endpoint contract.
+      operationId: request_status_api_v1_requests__request_id__get
+      security:
+      - PublicBearerAuth: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_RequestStatusData_ActionResult__'
+components:
+  schemas:
+    AcceptedData:
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        operation:
+          $ref: '#/components/schemas/Operation'
+        request_state:
+          type: string
+          const: processing
+          title: Request State
+          default: processing
+        status_url:
+          type: string
+          title: Status Url
+        accepted_at:
+          type: string
+          format: date-time
+          title: Accepted At
+      type: object
+      required:
+      - request_id
+      - operation
+      - status_url
+      - accepted_at
+      title: AcceptedData
+      description: Data returned after a function request is accepted.
+    ActionResult:
+      anyOf:
+      - $ref: '#/components/schemas/RideQuoteResult'
+      - $ref: '#/components/schemas/RideConfirmResult'
+      - $ref: '#/components/schemas/MusicPlayResult'
+      - $ref: '#/components/schemas/MusicStopResult'
+      - $ref: '#/components/schemas/MusicVolumeResult'
+      - $ref: '#/components/schemas/NavigationStartResult'
+      - $ref: '#/components/schemas/NavigationStopResult'
+      - $ref: '#/components/schemas/EmergencyCallResult'
+      - $ref: '#/components/schemas/ContactCallResult'
+    ContactCallRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        name:
+          type: string
+          minLength: 1
+          title: Name
+      type: object
+      required:
+      - user_id
+      - request_id
+      - name
+      title: ContactCallRequest
+      description: Call exactly one contact selected by name.
+    ContactCallResult:
+      properties:
+        call_state:
+          type: string
+          const: calling
+          title: Call State
+        contact_name:
+          type: string
+          title: Contact Name
+        phone_number:
+          type: string
+          title: Phone Number
+      type: object
+      required:
+      - call_state
+      - contact_name
+      - phone_number
+      title: ContactCallResult
+      description: Final result after calling one uniquely matched contact.
+    CurrentLocation:
+      properties:
+        lat:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Lat
+        lng:
+          type: number
+          maximum: 180.0
+          minimum: -180.0
+          title: Lng
+      type: object
+      required:
+      - lat
+      - lng
+      title: CurrentLocation
+      description: Current device location with contract-defined coordinate bounds.
+    Destination:
+      properties:
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+        lat:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Lat
+        lng:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Lng
+      type: object
+      title: Destination
+      description: Destination represented by an address, a coordinate pair, or both.
+    EmergencyCallRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+      type: object
+      required:
+      - user_id
+      - request_id
+      title: EmergencyCallRequest
+      description: Start the configured emergency call flow.
+    EmergencyCallResult:
+      properties:
+        emergency_state:
+          type: string
+          title: Emergency State
+        attempt:
+          type: integer
+          title: Attempt
+        answered:
+          type: boolean
+          title: Answered
+        cycle:
+          $ref: '#/components/schemas/EmergencyCycle'
+        contact:
+          type: string
+          title: Contact
+        sms_sent:
+          type: boolean
+          title: Sms Sent
+      type: object
+      required:
+      - emergency_state
+      - attempt
+      - answered
+      - cycle
+      - contact
+      - sms_sent
+      title: EmergencyCallResult
+      description: Emergency result without constraining the unresolved state enum.
+    EmergencyCycle:
+      type: string
+      enum:
+      - calling_5min
+      - paused_10min
+      - stopped
+      title: EmergencyCycle
+      description: Contract-defined stages in the emergency calling cycle.
+    ErrorResponse:
+      properties:
+        status:
+          type: string
+          const: error
+          title: Status
+          default: error
+        error:
+          $ref: '#/components/schemas/PublicError'
+      type: object
+      required:
+      - error
+      title: ErrorResponse
+      description: Synchronous Public API error envelope.
+    JsonValue: {}
+    MusicPlayRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        song:
+          type: string
+          title: Song
+        volume:
+          anyOf:
+          - type: integer
+            maximum: 100.0
+            minimum: 0.0
+          - type: 'null'
+          title: Volume
+      type: object
+      required:
+      - user_id
+      - request_id
+      - song
+      title: MusicPlayRequest
+      description: Play a song, optionally setting its initial volume.
+    MusicPlayResult:
+      properties:
+        track_id:
+          type: string
+          title: Track Id
+        title:
+          type: string
+          title: Title
+        artist:
+          type: string
+          title: Artist
+        playback_state:
+          type: string
+          const: playing
+          title: Playback State
+        volume:
+          type: integer
+          title: Volume
+      type: object
+      required:
+      - track_id
+      - title
+      - artist
+      - playback_state
+      - volume
+      title: MusicPlayResult
+      description: Final result after starting music playback.
+    MusicStopRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+      type: object
+      required:
+      - user_id
+      - request_id
+      title: MusicStopRequest
+      description: Stop active music playback.
+    MusicStopResult:
+      properties:
+        playback_state:
+          type: string
+          const: stopped
+          title: Playback State
+      type: object
+      required:
+      - playback_state
+      title: MusicStopResult
+      description: Final result after stopping music playback.
+    MusicVolumeRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        direction:
+          anyOf:
+          - $ref: '#/components/schemas/VolumeDirection'
+          - type: 'null'
+        level:
+          anyOf:
+          - type: integer
+            maximum: 100.0
+            minimum: 0.0
+          - type: 'null'
+          title: Level
+      type: object
+      required:
+      - user_id
+      - request_id
+      title: MusicVolumeRequest
+      description: Change volume by one relative direction or one absolute level.
+    MusicVolumeResult:
+      properties:
+        volume_state:
+          type: string
+          const: changed
+          title: Volume State
+        level:
+          type: integer
+          title: Level
+      type: object
+      required:
+      - volume_state
+      - level
+      title: MusicVolumeResult
+      description: Final result after changing device volume.
+    NavigationDestination:
+      properties:
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+        lat:
+          type: number
+          title: Lat
+        lng:
+          type: number
+          title: Lng
+      type: object
+      required:
+      - address
+      - lat
+      - lng
+      title: NavigationDestination
+      description: Provider-normalized navigation destination.
+    NavigationStartRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        destination:
+          $ref: '#/components/schemas/Destination'
+      type: object
+      required:
+      - user_id
+      - request_id
+      - destination
+      title: NavigationStartRequest
+      description: Start walking navigation to a destination.
+    NavigationStartResult:
+      properties:
+        navigation_id:
+          type: string
+          title: Navigation Id
+        navigation_state:
+          type: string
+          const: navigating
+          title: Navigation State
+        travel_mode:
+          type: string
+          const: walking
+          title: Travel Mode
+        destination:
+          $ref: '#/components/schemas/NavigationDestination'
+      type: object
+      required:
+      - navigation_id
+      - navigation_state
+      - travel_mode
+      - destination
+      title: NavigationStartResult
+      description: Final result after starting walking guidance.
+    NavigationStopRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        navigation_id:
+          type: string
+          title: Navigation Id
+      type: object
+      required:
+      - user_id
+      - request_id
+      - navigation_id
+      title: NavigationStopRequest
+      description: Stop a navigation session.
+    NavigationStopResult:
+      properties:
+        navigation_id:
+          type: string
+          title: Navigation Id
+        navigation_state:
+          type: string
+          const: stopped
+          title: Navigation State
+      type: object
+      required:
+      - navigation_id
+      - navigation_state
+      title: NavigationStopResult
+      description: Final result after stopping guidance.
+    OkResponse_AcceptedData_:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/AcceptedData'
+      type: object
+      required:
+      - data
+      title: OkResponse[AcceptedData]
+    OkResponse_RequestStatusData_ActionResult__:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/RequestStatusData_ActionResult_'
+      type: object
+      required:
+      - data
+      title: OkResponse[RequestStatusData[ActionResult]]
+    Operation:
+      type: string
+      enum:
+      - ride_quote
+      - ride_confirm
+      - music_play
+      - music_stop
+      - music_volume
+      - navigation_start
+      - navigation_stop
+      - emergency_call
+      - contact_call
+      title: Operation
+      description: Operations exposed in Public API responses.
+    PriceEstimate:
+      properties:
+        currency:
+          type: string
+          title: Currency
+        amount:
+          type: number
+          title: Amount
+      type: object
+      required:
+      - currency
+      - amount
+      title: PriceEstimate
+      description: Provider ride-price estimate.
+    PublicError:
+      properties:
+        code:
+          type: string
+          title: Code
+        message:
+          type: string
+          title: Message
+        details:
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+          type: object
+          title: Details
+      type: object
+      required:
+      - code
+      - message
+      - details
+      title: PublicError
+      description: Stable error representation shared by Public responses.
+    RequestState:
+      type: string
+      enum:
+      - processing
+      - succeeded
+      - failed
+      - timed_out
+      title: RequestState
+      description: Public request lifecycle states.
+    RequestStatusData_ActionResult_:
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        operation:
+          $ref: '#/components/schemas/Operation'
+        request_state:
+          $ref: '#/components/schemas/RequestState'
+        result:
+          anyOf:
+          - $ref: '#/components/schemas/ActionResult'
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/PublicError'
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - request_id
+      - operation
+      - request_state
+      - created_at
+      - updated_at
+      title: RequestStatusData[ActionResult]
+    RideConfirmRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        quote_id:
+          type: string
+          title: Quote Id
+        confirm:
+          type: boolean
+          title: Confirm
+      type: object
+      required:
+      - user_id
+      - request_id
+      - quote_id
+      - confirm
+      title: RideConfirmRequest
+      description: Confirm or cancel a previously returned ride quote.
+    RideConfirmResult:
+      properties:
+        quote_id:
+          type: string
+          title: Quote Id
+        ride_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ride Id
+        ride_status:
+          $ref: '#/components/schemas/RideStatus'
+      type: object
+      required:
+      - quote_id
+      - ride_id
+      - ride_status
+      title: RideConfirmResult
+      description: Final result for confirming or cancelling a ride quote.
+    RideQuoteRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        current_location:
+          $ref: '#/components/schemas/CurrentLocation'
+        destination:
+          $ref: '#/components/schemas/Destination'
+      type: object
+      required:
+      - user_id
+      - request_id
+      - current_location
+      - destination
+      title: RideQuoteRequest
+      description: Request a ride quote from the target device.
+    RideQuoteResult:
+      properties:
+        quote_id:
+          type: string
+          title: Quote Id
+        product_type:
+          type: string
+          title: Product Type
+        price_estimate:
+          $ref: '#/components/schemas/PriceEstimate'
+        eta_minutes:
+          type: integer
+          title: Eta Minutes
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+      type: object
+      required:
+      - quote_id
+      - product_type
+      - price_estimate
+      - eta_minutes
+      - expires_at
+      title: RideQuoteResult
+      description: Final ride quote result.
+    RideStatus:
+      type: string
+      enum:
+      - requested
+      - cancelled
+      title: RideStatus
+      description: Contract-defined ride confirmation states.
+    VolumeDirection:
+      type: string
+      enum:
+      - up
+      - down
+      title: VolumeDirection
+      description: Relative volume adjustment directions.
+  securitySchemes:
+    PublicBearerAuth:
+      type: http
+      scheme: bearer

@@ -1,0 +1,214 @@
+openapi: 3.1.0
+info:
+  title: App Communication Server Device API
+  version: 0.1.0
+paths:
+  /api/v1/device/register:
+    post:
+      summary: Register Device
+      description: Describe the Android device registration endpoint contract.
+      operationId: register_device_api_v1_device_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegisterRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_DeviceRegisterData_'
+      security:
+      - DeviceBearerAuth: []
+  /api/v1/device/report:
+    post:
+      summary: Report Device Result
+      description: Describe the Android device report endpoint contract.
+      operationId: report_device_result_api_v1_device_report_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceReportRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_DeviceReportData_'
+      security:
+      - DeviceBearerAuth: []
+components:
+  schemas:
+    Action:
+      type: string
+      enum:
+      - ride_quote
+      - ride_confirm
+      - music_play
+      - music_stop
+      - music_volume
+      - navigation_start
+      - navigation_stop
+      - emergency_call
+      - contact_call
+      title: Action
+      description: Internal handler actions corresponding one-to-one with operations.
+    DeviceExecutionError:
+      properties:
+        code:
+          type: string
+          title: Code
+        message:
+          type: string
+          title: Message
+        details:
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+          type: object
+          title: Details
+      type: object
+      required:
+      - code
+      - message
+      - details
+      title: DeviceExecutionError
+      description: Action execution error reported by the device.
+    DeviceRegisterData:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        registered:
+          type: boolean
+          const: true
+          title: Registered
+          default: true
+      type: object
+      required:
+      - device_id
+      title: DeviceRegisterData
+      description: Successful device registration result.
+    DeviceRegisterRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        device_id:
+          type: string
+          title: Device Id
+        platform:
+          type: string
+          const: android
+          title: Platform
+        push_token:
+          type: string
+          title: Push Token
+      type: object
+      required:
+      - user_id
+      - device_id
+      - platform
+      - push_token
+      title: DeviceRegisterRequest
+      description: Register or update an Android device delivery token.
+    DeviceReportData:
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        report_received:
+          type: boolean
+          const: true
+          title: Report Received
+          default: true
+      type: object
+      required:
+      - request_id
+      title: DeviceReportData
+      description: Successful device report acknowledgement.
+    DeviceReportRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        device_id:
+          type: string
+          title: Device Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        action:
+          $ref: '#/components/schemas/Action'
+        execution_state:
+          $ref: '#/components/schemas/ExecutionState'
+        result:
+          anyOf:
+          - additionalProperties:
+              $ref: '#/components/schemas/JsonValue'
+            type: object
+          - type: 'null'
+          title: Result
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/DeviceExecutionError'
+          - type: 'null'
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+      type: object
+      required:
+      - user_id
+      - device_id
+      - request_id
+      - action
+      - execution_state
+      - timestamp
+      title: DeviceReportRequest
+      description: Report the terminal outcome of a device action.
+    ExecutionState:
+      type: string
+      enum:
+      - succeeded
+      - failed
+      title: ExecutionState
+      description: Terminal execution states reported by Android.
+    JsonValue: {}
+    OkResponse_DeviceRegisterData_:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/DeviceRegisterData'
+      type: object
+      required:
+      - data
+      title: OkResponse[DeviceRegisterData]
+    OkResponse_DeviceReportData_:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/DeviceReportData'
+      type: object
+      required:
+      - data
+      title: OkResponse[DeviceReportData]
+  securitySchemes:
+    DeviceBearerAuth:
+      type: http
+      scheme: bearer

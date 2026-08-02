@@ -1,0 +1,41 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+google-services.json
+
+# Python
+__pycache__/
+*.py[cod]
+.python-version.local
+.venv/
+.tooling/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Android / Gradle
+.gradle/
+local.properties
+**/build/
+captures/
+.cxx/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Runtime output
+*.log
+tmp/
