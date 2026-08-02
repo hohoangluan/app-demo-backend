@@ -12,12 +12,12 @@ class OverviewUiStateTest {
 
     @Test
     fun `setup is ready only after server and device are configured`() {
-        assertFalse(OverviewUiState(serverConfigured = true).isReady)
-        assertFalse(OverviewUiState(deviceRegistered = true).isReady)
+        assertFalse(OverviewUiState(serverUrl = "http://10.0.2.2:8000", isRegistered = false).isReady)
+        assertFalse(OverviewUiState(serverUrl = "", isRegistered = true).isReady)
 
         val state = OverviewUiState(
-            serverConfigured = true,
-            deviceRegistered = true,
+            serverUrl = "http://10.0.2.2:8000",
+            isRegistered = true,
         )
 
         assertTrue(state.isReady)
