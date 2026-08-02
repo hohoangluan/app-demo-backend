@@ -1,15 +1,16 @@
-"""Operation repository: insert/read, and delivery claim/lease primitives.
+"""Operation repository: insert/read, delivery, callback and report/timeout primitives.
 
 Scope: this repository implements the primitives needed by
 ``docs/p1-database-plan.md`` transaction design sections "A. Accept request
-và idempotency" (task ``P1-DB-07``) and "B. Delivery claim/lease" (task
-``P1-DB-08``). It does not compute the idempotency fingerprint, does not pick
-a timeout or retry-backoff duration, does not classify transient-vs-permanent
-delivery failure, does not decide HTTP status codes or Public error codes,
-never calls FCM/network, and does not commit the session — all of that is
-the caller's (service layer's, or the future P2 worker's) responsibility.
-Callback-claim and report/timeout transitions are out of scope (future tasks
-``P1-DB-09``/``10``).
+và idempotency" (task ``P1-DB-07``), "B. Delivery claim/lease" (task
+``P1-DB-08``), "C. Callback claim/lease" (task ``P1-DB-09``), and "D. Device
+report và timeout race" (task ``P1-DB-10``). It does not compute the
+idempotency fingerprint, does not pick a timeout or retry-backoff duration,
+does not classify transient-vs-permanent delivery/callback failure, does not
+validate report ownership/schema, does not decide HTTP status codes or
+Public error codes, never calls FCM/HTTP/network, and does not commit the
+session — all of that is the caller's (service layer's, or the future P2
+worker's) responsibility.
 """
 
 from __future__ import annotations
@@ -84,6 +85,75 @@ class NewOperation:
     request_fingerprint: str
     callback_state: CallbackState
     expires_at: datetime
+
+
+class ReportExecutionState(StrEnum):
+    """Terminal execution outcome reported by the device.
+
+    Deliberately local to this repository rather than importing
+    ``app.schemas.device.ExecutionState``: the repository layer must not
+    depend on the Pydantic API-schema layer (dependency direction is
+    api -> service -> repository). The two enums share the same string
+    values by design so a service can convert one to the other trivially.
+    """
+
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+class ReportOutcomeStatus(StrEnum):
+    """Outcome of :meth:`OperationRepository.record_device_report`.
+
+    ``APPLIED``: the operation was still ``processing`` and is now
+    terminal (``succeeded``/``failed``) with the caller-supplied
+    result/error, ``report_payload_hash``, and callback scheduling.
+
+    ``IDEMPOTENT_DUPLICATE``: the operation was already terminal and the
+    caller-supplied ``report_payload_hash`` matches the hash stored on the
+    row (an exact-duplicate report, per ``CONTRACT_DECISIONS.md`` ``D-09``).
+    The row is returned unchanged; nothing is re-touched.
+
+    ``CONFLICT``: the operation was already terminal and the
+    caller-supplied ``report_payload_hash`` does not match the stored one
+    (including the case where the row has no stored hash at all, e.g. it
+    reached terminal via :meth:`record_timeout` rather than a report -- a
+    late report arriving after a timeout falls into this bucket, per
+    ``D-09``: it "does not change the terminal state"). No HTTP status or
+    Public error code is decided here; a future service layer maps this.
+    """
+
+    APPLIED = "applied"
+    IDEMPOTENT_DUPLICATE = "idempotent_duplicate"
+    CONFLICT = "conflict"
+
+
+@dataclass(frozen=True, slots=True)
+class ReportOutcome:
+    """Typed result of :meth:`OperationRepository.record_device_report`."""
+
+    status: ReportOutcomeStatus
+    operation: Operation
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceReport:
+    """Fields the caller must supply to record one device-report outcome.
+
+    Mirrors :class:`NewOperation`'s philosophy: the repository never
+    validates ownership/action/result schema (that is ``D-04``/``D-07``/
+    ``D-08``, the service layer's job) and never decides the
+    post-report ``callback_state``/``next_callback_at`` policy -- the caller
+    supplies both, exactly like ``expires_at``/``callback_state`` are
+    caller-supplied in :meth:`OperationRepository.insert_or_get`.
+    """
+
+    request_id: UUID
+    execution_state: ReportExecutionState
+    result: JsonObject | None
+    error: JsonObject | None
+    report_payload_hash: str
+    callback_state: CallbackState
+    next_callback_at: datetime | None
 
 
 class OperationRepository:
@@ -335,6 +405,271 @@ class OperationRepository:
                 request_state=RequestState.FAILED,
                 error=error,
                 completed_at=func.now(),
+                updated_at=func.now(),
+            )
+        )
+        return cast("CursorResult[Any]", result).rowcount > 0
+
+    async def claim_due_callbacks(
+        self, *, now: datetime, lease_until: datetime, limit: int
+    ) -> list[Operation]:
+        """Claim up to ``limit`` due callbacks and lease them to this worker.
+
+        Implements ``docs/p1-database-plan.md`` transaction design "C.
+        Callback claim/lease" steps 1-2. A row is due when its
+        ``request_state`` is terminal (``succeeded``/``failed``/``timed_out``
+        -- only a finished operation ever needs a result callback) and
+        either: ``callback_state`` is ``pending``/``retry`` with
+        ``next_callback_at <= now``; or ``callback_state`` is ``sending``
+        with an expired lease (``callback_locked_until <= now`` -- a crashed
+        worker's row, recovered here). Candidates are locked with
+        ``ORDER BY next_callback_at NULLS LAST, created_at`` plus
+        ``FOR UPDATE SKIP LOCKED``, mirroring :meth:`claim_due_deliveries`
+        exactly, so concurrent callers never contend on the same row.
+
+        Unlike delivery claiming, no device resolution happens here: a
+        callback is an HTTP POST to an external URL, not a device push, so
+        every locked candidate is claimed unconditionally -- updated to
+        ``callback_state='sending'``, ``callback_attempts += 1``, and
+        ``callback_locked_until = lease_until`` (the caller-supplied fencing
+        value the ``record_callback_*`` methods below require). ``now``/
+        ``lease_until`` are supplied by the caller; this primitive never
+        invents a clock reading or a lease duration. No URL/HTTP logic is
+        built here (out of scope for P1).
+
+        Returns the claimed :class:`Operation` rows. The caller still owns
+        ``commit()``.
+        """
+        due_predicate = or_(
+            and_(
+                Operation.callback_state.in_([CallbackState.PENDING, CallbackState.RETRY]),
+                Operation.next_callback_at <= now,
+            ),
+            and_(
+                Operation.callback_state == CallbackState.SENDING,
+                Operation.callback_locked_until <= now,
+            ),
+        )
+        terminal_states = [RequestState.SUCCEEDED, RequestState.FAILED, RequestState.TIMED_OUT]
+        candidates_result = await self._session.execute(
+            select(Operation)
+            .where(Operation.request_state.in_(terminal_states), due_predicate)
+            .order_by(Operation.next_callback_at.asc().nulls_last(), Operation.created_at.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        candidates = candidates_result.scalars().all()
+
+        claimed: list[Operation] = []
+        for candidate in candidates:
+            candidate.callback_state = CallbackState.SENDING
+            candidate.callback_attempts += 1
+            candidate.callback_locked_until = lease_until
+            candidate.updated_at = now
+            claimed.append(candidate)
+
+        if claimed:
+            await self._session.flush()
+        return claimed
+
+    async def record_callback_delivered(self, *, request_id: UUID, lease_until: datetime) -> bool:
+        """Fenced: mark a leased callback as successfully delivered.
+
+        Conditional on ``request_id``, ``callback_state='sending'``, and the
+        exact ``callback_locked_until == lease_until`` fencing value the
+        claim returned (``docs/p1-database-plan.md`` section C steps 4-5). A
+        stale/superseded lease matches zero rows and returns ``False``
+        without touching the new owner's row.
+
+        On success (``True``): ``callback_state`` becomes ``delivered`` and
+        both ``callback_locked_until`` and ``next_callback_at`` are cleared,
+        since a delivered callback is never due again. This method never
+        touches ``request_state``/``result``/``error``/``completed_at`` --
+        callback outcomes must never change the operation's already-terminal
+        state (section C step 5).
+        """
+        result = await self._session.execute(
+            update(Operation)
+            .where(
+                Operation.request_id == request_id,
+                Operation.callback_state == CallbackState.SENDING,
+                Operation.callback_locked_until == lease_until,
+            )
+            .values(
+                callback_state=CallbackState.DELIVERED,
+                callback_locked_until=None,
+                next_callback_at=None,
+                updated_at=func.now(),
+            )
+        )
+        return cast("CursorResult[Any]", result).rowcount > 0
+
+    async def record_callback_retry(
+        self, *, request_id: UUID, lease_until: datetime, next_callback_at: datetime
+    ) -> bool:
+        """Fenced: return a leased callback to ``retry`` after a failed delivery attempt.
+
+        Same fencing predicate as :meth:`record_callback_delivered`; returns
+        ``False`` for a stale/superseded lease.
+
+        On success: ``callback_state`` becomes ``retry``, ``next_callback_at``
+        is set to the caller-supplied timestamp (this primitive never
+        computes a retry-backoff duration -- that is the future retry
+        classifier's job, per ``D-02``), and ``callback_locked_until`` is
+        cleared so the row becomes claimable again once due. Never touches
+        ``request_state``/``result``/``error``/``completed_at``.
+        """
+        result = await self._session.execute(
+            update(Operation)
+            .where(
+                Operation.request_id == request_id,
+                Operation.callback_state == CallbackState.SENDING,
+                Operation.callback_locked_until == lease_until,
+            )
+            .values(
+                callback_state=CallbackState.RETRY,
+                next_callback_at=next_callback_at,
+                callback_locked_until=None,
+                updated_at=func.now(),
+            )
+        )
+        return cast("CursorResult[Any]", result).rowcount > 0
+
+    async def record_callback_dead_letter(self, *, request_id: UUID, lease_until: datetime) -> bool:
+        """Fenced: terminally give up on a leased callback after retry exhaustion.
+
+        Same fencing predicate as :meth:`record_callback_delivered`; returns
+        ``False`` for a stale/superseded lease.
+
+        On success: ``callback_state`` becomes ``dead_letter`` and both
+        ``callback_locked_until`` and ``next_callback_at`` are cleared, since
+        a dead-lettered callback is never due again. Never touches
+        ``request_state``/``result``/``error``/``completed_at`` -- the
+        operation's own terminal outcome is unaffected by callback delivery
+        failure (section C step 5).
+        """
+        result = await self._session.execute(
+            update(Operation)
+            .where(
+                Operation.request_id == request_id,
+                Operation.callback_state == CallbackState.SENDING,
+                Operation.callback_locked_until == lease_until,
+            )
+            .values(
+                callback_state=CallbackState.DEAD_LETTER,
+                callback_locked_until=None,
+                next_callback_at=None,
+                updated_at=func.now(),
+            )
+        )
+        return cast("CursorResult[Any]", result).rowcount > 0
+
+    async def record_device_report(self, report: DeviceReport) -> ReportOutcome | None:
+        """Atomically apply a device report per ``docs/p1-database-plan.md`` section D.
+
+        Implements steps 1-4: ``SELECT ... FOR UPDATE`` locks the row by
+        ``request_id`` first (step 1) -- this row lock is exactly what
+        guarantees the report-vs-timeout race in :meth:`record_timeout` has
+        one winner (step 6): a concurrent ``record_timeout`` conditional
+        ``UPDATE`` either blocks until this transaction commits (and then
+        finds ``request_state`` no longer ``processing``, so it affects zero
+        rows), or already won and committed before this ``SELECT FOR UPDATE``
+        runs (so this call takes the "already terminal" branch below).
+
+        Returns ``None`` if no row exists for ``request_id`` (report
+        validation/ownership against a real operation is the service layer's
+        job, per ``D-04``/``D-07``/``D-08`` -- out of scope here).
+
+        If the locked row is still ``processing``: transitions it to
+        ``succeeded``+``result`` or ``failed``+``error`` (per
+        ``report.execution_state``), sets ``completed_at``,
+        ``delivery_state=report_received``, ``report_payload_hash``, and the
+        caller-supplied ``callback_state``/``next_callback_at`` (this
+        primitive never decides callback policy). Returns an ``APPLIED``
+        outcome wrapping the updated row.
+
+        If the locked row is already terminal: no-op (the row is never
+        re-touched). Returns ``IDEMPOTENT_DUPLICATE`` if
+        ``report.report_payload_hash`` matches the row's stored hash
+        (``D-09`` exact-duplicate replay), otherwise ``CONFLICT`` (``D-09``
+        differing-payload-after-terminal, including a late report after an
+        already-``timed_out`` row, which never has a stored report hash).
+        """
+        locked_row = (
+            await self._session.execute(
+                select(Operation).where(Operation.request_id == report.request_id).with_for_update()
+            )
+        ).scalar_one_or_none()
+        if locked_row is None:
+            return None
+
+        if locked_row.request_state != RequestState.PROCESSING:
+            if locked_row.report_payload_hash == report.report_payload_hash:
+                return ReportOutcome(ReportOutcomeStatus.IDEMPOTENT_DUPLICATE, locked_row)
+            return ReportOutcome(ReportOutcomeStatus.CONFLICT, locked_row)
+
+        new_request_state = (
+            RequestState.SUCCEEDED
+            if report.execution_state is ReportExecutionState.SUCCEEDED
+            else RequestState.FAILED
+        )
+        update_result = await self._session.execute(
+            update(Operation)
+            .where(
+                Operation.request_id == report.request_id,
+                Operation.request_state == RequestState.PROCESSING,
+            )
+            .values(
+                request_state=new_request_state,
+                result=report.result,
+                error=report.error,
+                completed_at=func.now(),
+                delivery_state=DeliveryState.REPORT_RECEIVED,
+                report_payload_hash=report.report_payload_hash,
+                callback_state=report.callback_state,
+                next_callback_at=report.next_callback_at,
+                updated_at=func.now(),
+            )
+            .returning(Operation)
+        )
+        applied_row = update_result.scalars().one()
+        return ReportOutcome(ReportOutcomeStatus.APPLIED, applied_row)
+
+    async def record_timeout(self, *, request_id: UUID, now: datetime, error: JsonObject) -> bool:
+        """Conditionally transition a still-``processing``, expired operation to ``timed_out``.
+
+        Implements ``docs/p1-database-plan.md`` section D step 5: a single
+        conditional ``UPDATE ... WHERE request_id=? AND request_state=
+        'processing' AND expires_at <= ?``. This primitive does not invent
+        the internal ``REPORT_TIMEOUT`` blueprint reason (``D-13``) itself --
+        the caller supplies the full ``error`` payload (e.g.
+        ``{"code": "REPORT_TIMEOUT", ...}``), keeping this method a generic
+        conditional terminal-transition primitive with no opinion on error
+        content, matching :meth:`record_delivery_permanent_failure`'s
+        philosophy.
+
+        On success: sets ``request_state=timed_out``,
+        ``delivery_state=report_timeout``, ``completed_at=now()``, and the
+        caller-supplied ``error``.
+
+        Returns whether the update actually fired. ``False`` (0 rows) means
+        the operation had already left ``processing`` by the time this ran
+        -- either a device report won the race (``record_device_report``
+        already made it terminal) or ``expires_at`` was not yet due --
+        without needing to distinguish which.
+        """
+        result = await self._session.execute(
+            update(Operation)
+            .where(
+                Operation.request_id == request_id,
+                Operation.request_state == RequestState.PROCESSING,
+                Operation.expires_at <= now,
+            )
+            .values(
+                request_state=RequestState.TIMED_OUT,
+                delivery_state=DeliveryState.REPORT_TIMEOUT,
+                completed_at=func.now(),
+                error=error,
                 updated_at=func.now(),
             )
         )
