@@ -367,6 +367,11 @@ components:
         name:
           type: string
           title: Name
+        contact_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contact Id
       additionalProperties: false
       type: object
       required:
@@ -448,6 +453,11 @@ components:
           type: string
           format: uuid
           title: Request Id
+        number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Number
       additionalProperties: false
       type: object
       required:

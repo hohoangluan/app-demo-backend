@@ -10,7 +10,6 @@ Per ``architeture.md`` section 8.5, 9.4, 13.3 and ``CONTRACT_DECISIONS.md`` ``D-
 from __future__ import annotations
 
 import ipaddress
-import socket
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING

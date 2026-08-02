@@ -115,8 +115,44 @@ class NavigationStopRequest(ServiceRequest):
 class EmergencyCallRequest(ServiceRequest):
     """Start the configured emergency call flow."""
 
+    number: str | None = None
+
 
 class ContactCallRequest(ServiceRequest):
     """Call exactly one contact selected by name."""
 
     name: TrimmedNonEmptyStr
+    contact_id: str | None = None
+
+
+class QuotesSpeakRequest(ServiceRequest):
+    """Speak a quote or custom text."""
+
+    text: TrimmedNonEmptyStr
+    quote_id: str | None = None
+
+
+class MediaPlayRequest(ServiceRequest):
+    """Play a media track or song."""
+
+    song: TrimmedNonEmptyStr
+    media_id: str | None = None
+
+
+class CameraCaptureRequest(ServiceRequest):
+    """Capture a photo or video."""
+
+    mode: str = "photo"
+
+
+class DisplayShowRequest(ServiceRequest):
+    """Show a message on the device display."""
+
+    message: TrimmedNonEmptyStr
+
+
+class SystemSettingsRequest(ServiceRequest):
+    """Update a system setting on the device."""
+
+    setting_key: TrimmedNonEmptyStr
+    value: str | None = None
