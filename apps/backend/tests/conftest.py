@@ -18,8 +18,10 @@ def settings() -> Settings:
             "app_env": AppEnvironment.TEST,
             "http_port": 8000,
             "database_url": "postgresql+asyncpg://test:test@localhost:5432/app_test",
-            "public_api_token_hash": "test-only-public-hash",
-            "device_api_token_hash": "test-only-device-hash",
+            "public_api_token_hash": "1" * 64,
+            "public_api_client_id": "test-only-public-client",
+            "public_api_scopes": {"service:execute", "requests:read"},
+            "device_api_token_hash": "2" * 64,
             "field_encryption_key": "test-only-field-key",
             "delivery_transport": DeliveryTransport.FAKE,
         }

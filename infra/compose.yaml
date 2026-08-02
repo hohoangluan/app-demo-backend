@@ -35,6 +35,8 @@ services:
       HTTP_PORT: "8000"
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-app_demo}:${POSTGRES_PASSWORD:-app_demo_dev_only}@postgres:5432/${POSTGRES_DB:-app_demo}
       PUBLIC_API_TOKEN_HASH: ${PUBLIC_API_TOKEN_HASH:-replace-with-derived-public-token-hash}
+      PUBLIC_API_CLIENT_ID: ${PUBLIC_API_CLIENT_ID:-replace-with-a-public-client-id}
+      PUBLIC_API_SCOPES: ${PUBLIC_API_SCOPES:-service:execute,requests:read}
       DEVICE_API_TOKEN_HASH: ${DEVICE_API_TOKEN_HASH:-replace-with-derived-device-token-hash}
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-replace-with-a-urlsafe-base64-encoded-32-byte-key}
       DELIVERY_TRANSPORT: ${DELIVERY_TRANSPORT:-fake}
