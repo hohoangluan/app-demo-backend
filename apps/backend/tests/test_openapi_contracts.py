@@ -42,7 +42,12 @@ def test_public_and_device_contract_paths_are_separated(test_app: FastAPI) -> No
     assert set(public_schema["paths"]) == PUBLIC_PATHS
     assert set(device_schema["paths"]) == DEVICE_PATHS
     assert set(public_schema["paths"]).isdisjoint(device_schema["paths"])
-    assert set(test_app.openapi()["paths"]) == {"/health/live", "/health/ready"}
+    assert set(test_app.openapi()["paths"]) == {
+        "/health/live",
+        "/health/ready",
+        "/api/v1/requests/{request_id}",
+        "/api/v1/service/music/volume",
+    }
 
 
 def test_contracts_use_separate_http_bearer_security_schemes() -> None:

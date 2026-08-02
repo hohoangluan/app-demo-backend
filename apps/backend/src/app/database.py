@@ -1,5 +1,10 @@
 """SQLAlchemy async engine, session, and declarative metadata foundation."""
 
+from __future__ import annotations
+
+from collections.abc import AsyncGenerator
+
+from fastapi import Request
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -8,6 +13,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+
+
 
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_name)s",
@@ -43,3 +50,15 @@ def build_session_factory(engine: AsyncEngine) -> AsyncSessionFactory:
         class_=AsyncSession,
         expire_on_commit=False,
     )
+
+
+async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
+    """Yield a transaction-scoped database session from application.state.session_factory."""
+    session_factory: AsyncSessionFactory | None = getattr(
+        request.app.state, "session_factory", None
+    )
+    if session_factory is None:
+        message = "Database session factory is not configured on application state"
+        raise RuntimeError(message)
+    async with session_factory() as session:
+        yield session

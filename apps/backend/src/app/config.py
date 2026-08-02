@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Self
 
+from fastapi import Request
 from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
@@ -207,3 +208,11 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Load and cache validated process configuration."""
     return Settings()
+
+
+def get_app_settings(request: Request) -> Settings:
+    """Return validated application settings attached to application state."""
+    settings: Settings | None = getattr(request.app.state, "settings", None)
+    if settings is None:
+        return get_settings()
+    return settings

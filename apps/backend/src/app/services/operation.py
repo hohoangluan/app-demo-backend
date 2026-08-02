@@ -25,6 +25,8 @@ from app.models.enums import CallbackState
 from app.repositories.operation import NewOperation, OperationInsertStatus, OperationRepository
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from app.actions import ActionRoute
@@ -191,6 +193,18 @@ class OperationService:
             operation=outcome.operation,
             inserted=outcome.status is OperationInsertStatus.INSERTED,
         )
+
+    async def get_status(self, *, client_id: str, request_id: UUID) -> Operation | None:
+        """Return the operation owned by ``client_id``, or ``None`` if absent/wrong-owner.
+
+        Thin wrapper over :meth:`OperationRepository.get_by_request_id`,
+        which already collapses "request does not exist" and "request
+        belongs to another client" into the same ``None`` result. Per
+        ``CONTRACT_DECISIONS.md`` ``D-06``, both cases render as the exact
+        same ``404 REQUEST_NOT_FOUND`` Public error, so no caller ever needs
+        to distinguish them.
+        """
+        return await self._repository.get_by_request_id(client_id=client_id, request_id=request_id)
 
     def _initial_callback_state(self) -> CallbackState:
         """Pick the initial ``callback_state`` for a newly-accepted operation.
