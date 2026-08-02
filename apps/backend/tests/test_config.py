@@ -39,10 +39,14 @@ def test_settings_reject_non_async_database_url() -> None:
         Settings.model_validate(values)
 
 
-def test_settings_require_fcm_project_for_fcm_transport() -> None:
+def test_settings_require_fcm_project_for_fcm_transport(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Reject incomplete FCM delivery configuration."""
+    monkeypatch.delenv("FCM_PROJECT_ID", raising=False)
     values = valid_settings_data()
     values["delivery_transport"] = DeliveryTransport.FCM
+    values["fcm_project_id"] = None
 
     with pytest.raises(ValidationError, match="FCM_PROJECT_ID"):
         Settings.model_validate(values)
@@ -61,6 +65,7 @@ def test_settings_ignore_empty_optional_environment_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Treat optional variables rendered as empty strings as unset."""
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     environment = {
         "APP_ENV": "test",
         "HTTP_PORT": "8000",
@@ -79,12 +84,13 @@ def test_settings_ignore_empty_optional_environment_values(
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
 
-    settings = Settings()
+    settings = Settings(_env_file=None)
 
     assert settings.callback_url is None
     assert settings.callback_token is None
     assert settings.callback_allowed_hosts is None
     assert settings.fcm_project_id is None
+
 
 
 def test_settings_parse_comma_separated_public_api_scopes_from_environment(

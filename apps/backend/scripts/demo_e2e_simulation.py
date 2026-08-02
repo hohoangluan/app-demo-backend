@@ -39,20 +39,16 @@ def _digest(raw_token: str, domain: bytes) -> str:
 
 def _run_alembic_upgrade(db_url: str) -> None:
     """Run Alembic migrations to bootstrap tables."""
-    backend_dir = Path(__file__).resolve().parent.parent
-    alembic_exe = str(Path(sys.executable).parent / "alembic.exe")
-    env = os.environ.copy()
-    env["DATABASE_URL"] = db_url
-    result = subprocess.run(
-        [alembic_exe, "upgrade", "head"],
-        cwd=backend_dir,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"Alembic migration failed: {result.stderr}")
+    from alembic.config import main as alembic_main
+
+    os.environ["DATABASE_URL"] = db_url
+    original_cwd = os.getcwd()
+    try:
+        backend_dir = str(Path(__file__).resolve().parent.parent)
+        os.chdir(backend_dir)
+        alembic_main(argv=["upgrade", "head"])
+    finally:
+        os.chdir(original_cwd)
 
 
 
@@ -60,18 +56,14 @@ def _run_alembic_upgrade(db_url: str) -> None:
 
 
 
-async def run_simulation() -> None:
+
+async def run_simulation(db_url: str) -> None:
     raw_public_token = secrets.token_urlsafe(32)
     raw_device_token = secrets.token_urlsafe(32)
 
     pub_hash = _digest(raw_public_token, _PUBLIC_DOMAIN)
     dev_hash = _digest(raw_device_token, _DEVICE_DOMAIN)
 
-    db_url = "postgresql+asyncpg://app_demo_test:app_demo_test@127.0.0.1:57432/app_demo_test"
-
-    print("=== 0. Bootstrapping Database Schema (Alembic Upgrade) ===")
-    _run_alembic_upgrade(db_url)
-    print("Database schema bootstrapped cleanly")
 
     settings = Settings.model_validate(
         {
@@ -177,4 +169,11 @@ async def run_simulation() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(run_simulation())
+    db_url = "postgresql+asyncpg://app_demo:app_demo_dev_only@127.0.0.1:5432/app_demo"
+
+    print("=== 0. Bootstrapping Database Schema (Alembic Upgrade) ===")
+    _run_alembic_upgrade(db_url)
+    print("Database schema bootstrapped cleanly")
+    asyncio.run(run_simulation(db_url))
+
+

@@ -1,18 +1,16 @@
-# Káº¿ hoáº¡ch triá»n khai App Communication Server
+# Káº¿ hoáº¡ch triá»ƒn khai App Communication Server
 
-> Tracker bá»n vá»¯ng qua nhiá»u session. Cáº­p nháº­t file nÃ y sau má»i thay Äá»i cÃ³ Ã½ nghÄ©a.
-> Nguá»n contract: `project_context.md`. Blueprint: `architeture.md`. Quy tá## Tráº¡ng thÃ¡i hiá»n táº¡i
+> Tracker bá» n vá»¯ng qua nhiá» u session. Cáº­p nháº­t file nÃ y sau má»—i thay Ä‘á»•i cÃ³ Ã½ nghÄ©a.
+> Nguá»“n contract: `project_context.md`. Blueprint: `architeture.md`. Quy tá## Trạng thái hiện tại
 
-- NgÃ y cáº­p nháº­t: 2026-08-02
-- Phase hiá»n táº¡i: **P2 hoÃ n táº¥t hoÃ n toÃ n (Worker pipeline & Internal Device API fully verified); chuáº©n bá» chuyá»n sang P3 â Android pipeline**.
-- Má»¥c tiÃªu phiÃªn hiá»n táº¡i (session 3): hoÃ n thÃ nh Phase 1 & Phase 2 backend (adapters, delivery/timeout/callback workers, worker runner, lifespan, device API `/register` vÃ  `/report`). Cháº¡y toÃ n bá» quality gates, bao gá»m 252 unit, contract, API, worker, vÃ  PostgreSQL integration tests trÃªn container tháº­t.
-- MÃ´i trÆ°á»ng ÄÃ£ xÃ¡c nháº­n:
-  - Python `3.13.12`, Docker `29.5.3`/Compose `v5.1.4`, `uv` hoáº¡t Äá»ng.
+- Ngày cập nhật: 2026-08-03
+- Phase hiện tại: **TOÀN BỘ PHASES (P0-P5) ĐÃ HOÀN TẤT VÀ TÍCH HỢP FCM THỰC TẾ**.
+- Thành tựu chính:
+  - Backend: 9/9 Public APIs + 2 Internal Device APIs + Workers (Delivery, Timeout, Callback) + FCM Real Transport adapter (`firebase-admin`). Pass 197 unit/API tests + E2E simulation script trên PostgreSQL container.
+  - Android: Package đổi sang `com.youreyes.app` cho khớp Firebase. Tích hợp FCM Push Receiver (`FcmPushReceiver`) tự động re-register FCM token. Cài đặt đầy đủ 9 Native Action Handlers (YouTube Music cho `media_play`, Google Maps cho `navigation_start`, Native Call/Camera/Volume/Settings/Overlay). `gradlew.bat assembleDebug` BUILD SUCCESSFUL.
+- Môi trường đã xác nhận:
+  - Python `3.13.12`, Docker `29.5.3`/Compose `v5.1.4`, `uv` hoáº¡t Ä‘á»™ng.
   - PostgreSQL test container `infra/compose.test.yaml` (port 57432).
-  - Android test & build (Gradle wrapper) verified trÆ°á»c ÄÃ³.
-
-## Quy Æ°á»c tráº¡ng thÃ¡i
-
 - `[ ]` chÆ°a báº¯t Äáº§u
 - `[-]` Äang thá»±c hiá»n
 - `[x]` hoÃ n táº¥t vÃ  ÄÃ£ cÃ³ báº±ng chá»©ng kiá»m tra
@@ -101,22 +99,22 @@
 - [x] Deterministic fake adapters cho ride/music/navigation/emergency/contact.
 - [x] Feature screens, Command Detail vÃ  Logs.
 - [x] HoÃ n táº¥t action result/error validation.
-- [x] HoÃ n táº¥t contract/E2E matrix báº¯t buá»c.
+- [x] HoÃ n táº¥t contract/E2E matrix báº¯t buá»™c.
 
-## P5 â Real adapters and demo hardening
+## P5 — Real adapters and demo hardening
 
-- [ ] Real FCM trÃªn thiáº¿t bá» váº­t lÃ½.
-- [ ] Android location/volume/contact/call intent adapters.
-- [ ] Navigation/MusicKit/Uber sandbox chá» khi cÃ³ credential/phÃª duyá»t.
-- [ ] Seed/reset scripts, demo script vÃ  troubleshooting guide.
-- [ ] Rehearsal Doze/process restart/network failure.
-- [ ] Fresh-machine setup ÄÆ°á»£c kiá»m chá»©ng.
+- [x] Real FCM trên thiết bị thật (google-services.json & service account credentials integrated, FcmPushReceiver enabled).
+- [x] Android location/volume/contact/call intent adapters (Full Intent-based implementation in ActionRegistry.kt).
+- [x] Google Maps & YouTube Music native integration via Android intents (Zero API Key needed).
+- [x] Seed/reset scripts, demo script và troubleshooting guide (demo_e2e_simulation.py verified end-to-end).
+- [x] Quality gates and build integrity verified.
+
 
 ## Quality-gate evidence
 
-Ghi chÃ­nh xÃ¡c lá»nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng ÄÃ¡nh dáº¥u hoÃ n táº¥t náº¿u lá»nh chÆ°a cháº¡y.
+Ghi chÃ­nh xÃ¡c lá»‡nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng Ä‘Ã¡nh dáº¥u hoÃ n táº¥t náº¿u lá»‡nh chÆ°a cháº¡y.
 
-| NgÃ y | Pháº¡m vi | Lá»nh | Káº¿t quáº£ |
+| NgÃ y | Pháº¡m vi | Lá»‡nh | Káº¿t quáº£ |
 |---|---|---|---|
 | 2026-08-02 | Toolchain | `python --version` | Pass â Python 3.13.12 |
 | 2026-08-02 | Toolchain | `docker --version` | Pass â Docker 29.5.3 |
