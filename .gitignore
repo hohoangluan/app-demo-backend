@@ -5,7 +5,10 @@
 *.pem
 *.key
 *service-account*.json
+*adminsdk*.json
+*firebase-adminsdk*.json
 google-services.json
+apps/android/app/google-services.json
 
 # Python
 __pycache__/

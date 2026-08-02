@@ -6,19 +6,39 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.youreyes.app.data.AppDatabaseHelper
 import com.youreyes.app.dispatcher.CommandDispatcher
+import com.youreyes.app.network.DeviceApiClient
+import java.util.concurrent.Executors
 
 // FCM Push Receiver - entry point for commands pushed from the backend.
 // Backend sends DATA messages: request_id, user_id, device_id, action, params_json, base_url, bearer_token
 class FcmPushReceiver : FirebaseMessagingService() {
 
+    private val executor = Executors.newSingleThreadExecutor()
+
     override fun onNewToken(token: String) {
-        super.onNewToken(token)
-        Log.i(TAG, "New FCM token: $token")
-        // TODO: re-register with backend /api/v1/device/register
+        Log.i(TAG, "New FCM token received - saving and re-registering")
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_FCM_TOKEN, token).apply()
+        val savedUserId     = prefs.getString(KEY_USER_ID, null)
+        val savedDeviceId   = prefs.getString(KEY_DEVICE_ID, null)
+        val baseUrl         = prefs.getString(KEY_BASE_URL, null)
+        val bearerToken     = prefs.getString(KEY_BEARER_TOKEN, null)
+        if (savedUserId != null && savedDeviceId != null && baseUrl != null && bearerToken != null) {
+            executor.execute {
+                DeviceApiClient().register(
+                    userId      = savedUserId,
+                    deviceId    = savedDeviceId,
+                    platform    = "android",
+                    pushToken   = token,
+                    baseUrl     = baseUrl,
+                    bearerToken = bearerToken,
+                )
+                Log.i(TAG, "Re-registered with backend after token refresh")
+            }
+        }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        super.onMessageReceived(message)
         val data = message.data
         Log.d(TAG, "FCM message received, keys=${data.keys}")
 
@@ -31,23 +51,22 @@ class FcmPushReceiver : FirebaseMessagingService() {
         val bearerToken = data["bearer_token"]
 
         val ctx: Context = applicationContext
-        val dispatcher = CommandDispatcher(
-            dbHelper = AppDatabaseHelper(ctx),
-            context  = ctx,
-        )
-
-        val result = dispatcher.processPushCommand(
-            requestId   = requestId,
-            userId      = userId,
-            deviceId    = deviceId,
-            action      = action,
-            paramsJson  = paramsJson,
-            baseUrl     = baseUrl,
-            bearerToken = bearerToken,
-        )
-
-        Log.i(TAG, "Dispatch result for $requestId")
-        Log.d(TAG, result.toString())
+        executor.execute {
+            val dispatcher = CommandDispatcher(
+                dbHelper = AppDatabaseHelper(ctx),
+                context  = ctx,
+            )
+            val result = dispatcher.processPushCommand(
+                requestId   = requestId,
+                userId      = userId,
+                deviceId    = deviceId,
+                action      = action,
+                paramsJson  = paramsJson,
+                baseUrl     = baseUrl,
+                bearerToken = bearerToken,
+            )
+            Log.i(TAG, "Dispatch result for request: $result")
+        }
     }
 
     private fun logMissing(field: String) {
@@ -55,6 +74,12 @@ class FcmPushReceiver : FirebaseMessagingService() {
     }
 
     companion object {
-        private const val TAG = "FcmPushReceiver"
+        const val PREFS_NAME       = "appdemo_prefs"
+        const val KEY_FCM_TOKEN    = "fcm_token"
+        const val KEY_USER_ID      = "user_id"
+        const val KEY_DEVICE_ID    = "device_id"
+        const val KEY_BASE_URL     = "base_url"
+        const val KEY_BEARER_TOKEN = "bearer_token"
+        private const val TAG      = "FcmPushReceiver"
     }
 }

@@ -87,4 +87,22 @@ class DeviceApiClient {
             }
         }
     }
+    // Convenience method used by FcmPushReceiver on token refresh
+    fun register(
+        userId: String,
+        deviceId: String,
+        platform: String,
+        pushToken: String,
+        baseUrl: String,
+        bearerToken: String,
+    ): Result<Boolean> = registerDevice(
+        baseUrl = baseUrl,
+        bearerToken = bearerToken,
+        payload = com.youreyes.app.model.DeviceRegisterPayload(
+            userId   = userId,
+            deviceId = deviceId,
+            platform = platform,
+            pushToken = pushToken,
+        ),
+    )
 }
