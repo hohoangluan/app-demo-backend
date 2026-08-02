@@ -1,14 +1,17 @@
 """Public function result schemas sourced from the published contract."""
 
-from datetime import datetime
 from enum import StrEnum
 from typing import Literal, Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
+
+from app.schemas.common import AwareUtcDatetime, Latitude, Longitude
 
 
 class PriceEstimate(BaseModel):
     """Provider ride-price estimate."""
+
+    model_config = ConfigDict(extra="forbid")
 
     currency: str
     amount: float
@@ -17,11 +20,13 @@ class PriceEstimate(BaseModel):
 class RideQuoteResult(BaseModel):
     """Final ride quote result."""
 
+    model_config = ConfigDict(extra="forbid")
+
     quote_id: str
     product_type: str
     price_estimate: PriceEstimate
     eta_minutes: int
-    expires_at: datetime
+    expires_at: AwareUtcDatetime
 
 
 class RideStatus(StrEnum):
@@ -33,6 +38,8 @@ class RideStatus(StrEnum):
 
 class RideConfirmResult(BaseModel):
     """Final result for confirming or cancelling a ride quote."""
+
+    model_config = ConfigDict(extra="forbid")
 
     quote_id: str
     ride_id: str | None
@@ -53,6 +60,8 @@ class RideConfirmResult(BaseModel):
 class MusicPlayResult(BaseModel):
     """Final result after starting music playback."""
 
+    model_config = ConfigDict(extra="forbid")
+
     track_id: str
     title: str
     artist: str
@@ -63,11 +72,15 @@ class MusicPlayResult(BaseModel):
 class MusicStopResult(BaseModel):
     """Final result after stopping music playback."""
 
+    model_config = ConfigDict(extra="forbid")
+
     playback_state: Literal["stopped"]
 
 
 class MusicVolumeResult(BaseModel):
     """Final result after changing device volume."""
+
+    model_config = ConfigDict(extra="forbid")
 
     volume_state: Literal["changed"]
     level: int
@@ -76,13 +89,17 @@ class MusicVolumeResult(BaseModel):
 class NavigationDestination(BaseModel):
     """Provider-normalized navigation destination."""
 
+    model_config = ConfigDict(extra="forbid")
+
     address: str | None
-    lat: float
-    lng: float
+    lat: Latitude
+    lng: Longitude
 
 
 class NavigationStartResult(BaseModel):
     """Final result after starting walking guidance."""
+
+    model_config = ConfigDict(extra="forbid")
 
     navigation_id: str
     navigation_state: Literal["navigating"]
@@ -92,6 +109,8 @@ class NavigationStartResult(BaseModel):
 
 class NavigationStopResult(BaseModel):
     """Final result after stopping guidance."""
+
+    model_config = ConfigDict(extra="forbid")
 
     navigation_id: str
     navigation_state: Literal["stopped"]
@@ -108,6 +127,8 @@ class EmergencyCycle(StrEnum):
 class EmergencyCallResult(BaseModel):
     """Emergency result without constraining the unresolved state enum."""
 
+    model_config = ConfigDict(extra="forbid")
+
     emergency_state: str
     attempt: int
     answered: bool
@@ -118,6 +139,8 @@ class EmergencyCallResult(BaseModel):
 
 class ContactCallResult(BaseModel):
     """Final result after calling one uniquely matched contact."""
+
+    model_config = ConfigDict(extra="forbid")
 
     call_state: Literal["calling"]
     contact_name: str

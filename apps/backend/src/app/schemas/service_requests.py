@@ -4,23 +4,27 @@ from enum import StrEnum
 from typing import Annotated, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.schemas.common import Latitude, Longitude, TrimmedNonEmptyStr
 
 
 class ServiceRequest(BaseModel):
     """Fields shared by every Public function request."""
 
-    user_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: TrimmedNonEmptyStr
     request_id: UUID
 
 
-Latitude = Annotated[float, Field(ge=-90, le=90)]
-Longitude = Annotated[float, Field(ge=-180, le=180)]
 VolumeLevel = Annotated[int, Field(ge=0, le=100)]
 
 
 class CurrentLocation(BaseModel):
     """Current device location with contract-defined coordinate bounds."""
+
+    model_config = ConfigDict(extra="forbid")
 
     lat: Latitude
     lng: Longitude
@@ -29,9 +33,11 @@ class CurrentLocation(BaseModel):
 class Destination(BaseModel):
     """Destination represented by an address, a coordinate pair, or both."""
 
+    model_config = ConfigDict(extra="forbid")
+
     address: str | None = None
-    lat: float | None = None
-    lng: float | None = None
+    lat: Latitude | None = None
+    lng: Longitude | None = None
 
     @model_validator(mode="after")
     def validate_destination_shape(self) -> Self:
@@ -57,14 +63,14 @@ class RideQuoteRequest(ServiceRequest):
 class RideConfirmRequest(ServiceRequest):
     """Confirm or cancel a previously returned ride quote."""
 
-    quote_id: str
+    quote_id: TrimmedNonEmptyStr
     confirm: bool
 
 
 class MusicPlayRequest(ServiceRequest):
     """Play a song, optionally setting its initial volume."""
 
-    song: str
+    song: TrimmedNonEmptyStr
     volume: VolumeLevel | None = None
 
 
@@ -103,7 +109,7 @@ class NavigationStartRequest(ServiceRequest):
 class NavigationStopRequest(ServiceRequest):
     """Stop a navigation session."""
 
-    navigation_id: str
+    navigation_id: TrimmedNonEmptyStr
 
 
 class EmergencyCallRequest(ServiceRequest):
@@ -113,4 +119,4 @@ class EmergencyCallRequest(ServiceRequest):
 class ContactCallRequest(ServiceRequest):
     """Call exactly one contact selected by name."""
 
-    name: str = Field(min_length=1)
+    name: TrimmedNonEmptyStr

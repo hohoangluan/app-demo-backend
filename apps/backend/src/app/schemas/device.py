@@ -1,13 +1,13 @@
 """Internal Android Device API schemas from the published contract."""
 
-from datetime import datetime
 from enum import StrEnum
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, JsonValue, model_validator
+from pydantic import BaseModel, ConfigDict, JsonValue, model_validator
 
 from app.actions import Action
+from app.schemas.common import AwareUtcDatetime, TrimmedNonEmptyStr
 
 
 class DevicePlatform(StrEnum):
@@ -19,14 +19,18 @@ class DevicePlatform(StrEnum):
 class DeviceRegisterRequest(BaseModel):
     """Register or update an Android device delivery token."""
 
-    user_id: str
-    device_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: TrimmedNonEmptyStr
+    device_id: TrimmedNonEmptyStr
     platform: Literal[DevicePlatform.ANDROID]
-    push_token: str
+    push_token: TrimmedNonEmptyStr
 
 
 class DeviceRegisterData(BaseModel):
     """Successful device registration result."""
+
+    model_config = ConfigDict(extra="forbid")
 
     device_id: str
     registered: Literal[True] = True
@@ -42,6 +46,8 @@ class ExecutionState(StrEnum):
 class DeviceExecutionError(BaseModel):
     """Action execution error reported by the device."""
 
+    model_config = ConfigDict(extra="forbid")
+
     code: str
     message: str
     details: dict[str, JsonValue]
@@ -50,14 +56,16 @@ class DeviceExecutionError(BaseModel):
 class DeviceReportRequest(BaseModel):
     """Report the terminal outcome of a device action."""
 
-    user_id: str
-    device_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: TrimmedNonEmptyStr
+    device_id: TrimmedNonEmptyStr
     request_id: UUID
     action: Action
     execution_state: ExecutionState
     result: dict[str, JsonValue] | None = None
     error: DeviceExecutionError | None = None
-    timestamp: datetime
+    timestamp: AwareUtcDatetime
 
     @model_validator(mode="after")
     def validate_execution_payload(self) -> Self:
@@ -77,6 +85,8 @@ class DeviceReportRequest(BaseModel):
 
 class DeviceReportData(BaseModel):
     """Successful device report acknowledgement."""
+
+    model_config = ConfigDict(extra="forbid")
 
     request_id: UUID
     report_received: Literal[True] = True

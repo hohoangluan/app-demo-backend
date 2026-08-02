@@ -150,3 +150,102 @@ def test_emergency_result_rejects_unknown_cycle() -> None:
                 "sms_sent": True,
             }
         )
+
+
+@pytest.mark.parametrize(("result_model", "payload"), RESULT_EXAMPLES)
+def test_documented_result_rejects_unexpected_field(
+    result_model: type[BaseModel],
+    payload: dict[str, Any],
+) -> None:
+    """Reject an undocumented field on every published result shape."""
+    with pytest.raises(ValidationError):
+        result_model.model_validate(payload | {"unexpected_field": "nope"})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("lat", -90.1), ("lat", 90.1), ("lng", -180.1), ("lng", 180.1)],
+)
+def test_navigation_start_result_rejects_out_of_range_destination_coordinate(
+    field: str,
+    value: float,
+) -> None:
+    """Reject a navigation destination coordinate outside the shared bounds."""
+    destination = {"address": "Destination", "lat": 10.0, "lng": 106.0} | {field: value}
+
+    with pytest.raises(ValidationError):
+        NavigationStartResult.model_validate(
+            {
+                "navigation_id": "nav-123",
+                "navigation_state": "navigating",
+                "travel_mode": "walking",
+                "destination": destination,
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("lat", -90), ("lat", 90), ("lng", -180), ("lng", 180)],
+)
+def test_navigation_start_result_accepts_destination_coordinate_boundaries(
+    field: str,
+    value: int,
+) -> None:
+    """Accept a navigation destination coordinate at the shared bounds."""
+    destination = {"address": "Destination", "lat": 10.0, "lng": 106.0} | {field: value}
+
+    result = NavigationStartResult.model_validate(
+        {
+            "navigation_id": "nav-123",
+            "navigation_state": "navigating",
+            "travel_mode": "walking",
+            "destination": destination,
+        }
+    )
+
+    assert getattr(result.destination, field) == value
+
+
+def test_ride_quote_result_rejects_naive_expires_at() -> None:
+    """Reject a naive expires_at datetime on the ride quote result."""
+    with pytest.raises(ValidationError):
+        RideQuoteResult.model_validate(
+            {
+                "quote_id": "quote-123",
+                "product_type": "standard",
+                "price_estimate": {"currency": "VND", "amount": 85_000},
+                "eta_minutes": 6,
+                "expires_at": "2026-08-02T10:05:00",
+            }
+        )
+
+
+def test_ride_quote_result_normalizes_non_utc_expires_at() -> None:
+    """Normalize a non-UTC expires_at offset to UTC on the ride quote result."""
+    result = RideQuoteResult.model_validate(
+        {
+            "quote_id": "quote-123",
+            "product_type": "standard",
+            "price_estimate": {"currency": "VND", "amount": 85_000},
+            "eta_minutes": 6,
+            "expires_at": "2026-08-02T17:05:00+07:00",
+        }
+    )
+
+    assert result.expires_at.isoformat() == "2026-08-02T10:05:00+00:00"
+
+
+def test_ride_quote_result_accepts_utc_expires_at() -> None:
+    """Accept an already-UTC expires_at datetime on the ride quote result."""
+    result = RideQuoteResult.model_validate(
+        {
+            "quote_id": "quote-123",
+            "product_type": "standard",
+            "price_estimate": {"currency": "VND", "amount": 85_000},
+            "eta_minutes": 6,
+            "expires_at": "2026-08-02T10:05:00Z",
+        }
+    )
+
+    assert result.expires_at.isoformat() == "2026-08-02T10:05:00+00:00"

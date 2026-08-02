@@ -72,6 +72,7 @@ components:
             $ref: '#/components/schemas/JsonValue'
           type: object
           title: Details
+      additionalProperties: false
       type: object
       required:
       - code
@@ -89,6 +90,7 @@ components:
           const: true
           title: Registered
           default: true
+      additionalProperties: false
       type: object
       required:
       - device_id
@@ -109,6 +111,7 @@ components:
         push_token:
           type: string
           title: Push Token
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -128,6 +131,7 @@ components:
           const: true
           title: Report Received
           default: true
+      additionalProperties: false
       type: object
       required:
       - request_id
@@ -164,6 +168,7 @@ components:
           type: string
           format: date-time
           title: Timestamp
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -191,6 +196,7 @@ components:
           default: ok
         data:
           $ref: '#/components/schemas/DeviceRegisterData'
+      additionalProperties: false
       type: object
       required:
       - data
@@ -204,6 +210,7 @@ components:
           default: ok
         data:
           $ref: '#/components/schemas/DeviceReportData'
+      additionalProperties: false
       type: object
       required:
       - data

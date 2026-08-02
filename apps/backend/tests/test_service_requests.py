@@ -177,3 +177,94 @@ def test_contact_call_rejects_empty_name() -> None:
     """Reject the explicitly forbidden empty contact name."""
     with pytest.raises(ValidationError):
         ContactCallRequest.model_validate(BASE_REQUEST | {"name": ""})
+
+
+@pytest.mark.parametrize(("request_model", "payload"), REQUEST_EXAMPLES)
+def test_documented_request_rejects_unexpected_field(
+    request_model: type[BaseModel],
+    payload: dict[str, Any],
+) -> None:
+    """Reject an undocumented field on every published request shape."""
+    with pytest.raises(ValidationError):
+        request_model.model_validate(payload | {"unexpected_field": "nope"})
+
+
+@pytest.mark.parametrize(
+    ("request_model", "field", "extra_payload"),
+    [
+        (RideConfirmRequest, "quote_id", {"confirm": True}),
+        (MusicPlayRequest, "song", {}),
+        (NavigationStopRequest, "navigation_id", {}),
+        (ContactCallRequest, "name", {}),
+    ],
+)
+def test_client_supplied_field_rejects_whitespace_only_value(
+    request_model: type[BaseModel],
+    field: str,
+    extra_payload: dict[str, Any],
+) -> None:
+    """Reject client-supplied free-text fields containing only whitespace."""
+    payload = BASE_REQUEST | extra_payload | {field: "   "}
+
+    with pytest.raises(ValidationError):
+        request_model.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("request_model", "field", "extra_payload"),
+    [
+        (RideConfirmRequest, "quote_id", {"confirm": True}),
+        (MusicPlayRequest, "song", {}),
+        (NavigationStopRequest, "navigation_id", {}),
+        (ContactCallRequest, "name", {}),
+    ],
+)
+def test_client_supplied_field_trims_whitespace(
+    request_model: type[BaseModel],
+    field: str,
+    extra_payload: dict[str, Any],
+) -> None:
+    """Store the trimmed value for client-supplied free-text request fields."""
+    payload = BASE_REQUEST | extra_payload | {field: f"  {field}-value  "}
+
+    request = request_model.model_validate(payload)
+
+    assert getattr(request, field) == f"{field}-value"
+
+
+def test_service_request_user_id_trims_whitespace() -> None:
+    """Store the trimmed user_id shared by every Public function request."""
+    request = MusicStopRequest.model_validate(BASE_REQUEST | {"user_id": "  user-123  "})
+
+    assert request.user_id == "user-123"
+
+
+def test_service_request_rejects_whitespace_only_user_id() -> None:
+    """Reject a whitespace-only user_id shared by every Public function request."""
+    with pytest.raises(ValidationError):
+        MusicStopRequest.model_validate(BASE_REQUEST | {"user_id": "   "})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("lat", -90.1), ("lat", 90.1), ("lng", -180.1), ("lng", 180.1)],
+)
+def test_destination_rejects_out_of_range_coordinate(field: str, value: float) -> None:
+    """Reject destination coordinates outside the shared coordinate bounds."""
+    destination = {"lat": 10.0, "lng": 106.0} | {field: value}
+
+    with pytest.raises(ValidationError):
+        NavigationStartRequest.model_validate(BASE_REQUEST | {"destination": destination})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("lat", -90), ("lat", 90), ("lng", -180), ("lng", 180)],
+)
+def test_destination_accepts_coordinate_boundaries(field: str, value: int) -> None:
+    """Accept destination coordinates at the shared coordinate bounds."""
+    destination = {"lat": 10.0, "lng": 106.0} | {field: value}
+
+    request = NavigationStartRequest.model_validate(BASE_REQUEST | {"destination": destination})
+
+    assert getattr(request.destination, field) == value

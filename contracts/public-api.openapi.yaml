@@ -335,6 +335,7 @@ components:
           type: string
           format: date-time
           title: Accepted At
+      additionalProperties: false
       type: object
       required:
       - request_id
@@ -365,8 +366,8 @@ components:
           title: Request Id
         name:
           type: string
-          minLength: 1
           title: Name
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -386,6 +387,7 @@ components:
         phone_number:
           type: string
           title: Phone Number
+      additionalProperties: false
       type: object
       required:
       - call_state
@@ -405,6 +407,7 @@ components:
           maximum: 180.0
           minimum: -180.0
           title: Lng
+      additionalProperties: false
       type: object
       required:
       - lat
@@ -421,13 +424,18 @@ components:
         lat:
           anyOf:
           - type: number
+            maximum: 90.0
+            minimum: -90.0
           - type: 'null'
           title: Lat
         lng:
           anyOf:
           - type: number
+            maximum: 180.0
+            minimum: -180.0
           - type: 'null'
           title: Lng
+      additionalProperties: false
       type: object
       title: Destination
       description: Destination represented by an address, a coordinate pair, or both.
@@ -440,6 +448,7 @@ components:
           type: string
           format: uuid
           title: Request Id
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -465,6 +474,7 @@ components:
         sms_sent:
           type: boolean
           title: Sms Sent
+      additionalProperties: false
       type: object
       required:
       - emergency_state
@@ -492,6 +502,7 @@ components:
           default: error
         error:
           $ref: '#/components/schemas/PublicError'
+      additionalProperties: false
       type: object
       required:
       - error
@@ -517,6 +528,7 @@ components:
             minimum: 0.0
           - type: 'null'
           title: Volume
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -542,6 +554,7 @@ components:
         volume:
           type: integer
           title: Volume
+      additionalProperties: false
       type: object
       required:
       - track_id
@@ -560,6 +573,7 @@ components:
           type: string
           format: uuid
           title: Request Id
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -572,6 +586,7 @@ components:
           type: string
           const: stopped
           title: Playback State
+      additionalProperties: false
       type: object
       required:
       - playback_state
@@ -597,6 +612,7 @@ components:
             minimum: 0.0
           - type: 'null'
           title: Level
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -612,6 +628,7 @@ components:
         level:
           type: integer
           title: Level
+      additionalProperties: false
       type: object
       required:
       - volume_state
@@ -627,10 +644,15 @@ components:
           title: Address
         lat:
           type: number
+          maximum: 90.0
+          minimum: -90.0
           title: Lat
         lng:
           type: number
+          maximum: 180.0
+          minimum: -180.0
           title: Lng
+      additionalProperties: false
       type: object
       required:
       - address
@@ -649,6 +671,7 @@ components:
           title: Request Id
         destination:
           $ref: '#/components/schemas/Destination'
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -671,6 +694,7 @@ components:
           title: Travel Mode
         destination:
           $ref: '#/components/schemas/NavigationDestination'
+      additionalProperties: false
       type: object
       required:
       - navigation_id
@@ -691,6 +715,7 @@ components:
         navigation_id:
           type: string
           title: Navigation Id
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -707,6 +732,7 @@ components:
           type: string
           const: stopped
           title: Navigation State
+      additionalProperties: false
       type: object
       required:
       - navigation_id
@@ -722,6 +748,7 @@ components:
           default: ok
         data:
           $ref: '#/components/schemas/AcceptedData'
+      additionalProperties: false
       type: object
       required:
       - data
@@ -735,6 +762,7 @@ components:
           default: ok
         data:
           $ref: '#/components/schemas/RequestStatusData_ActionResult_'
+      additionalProperties: false
       type: object
       required:
       - data
@@ -761,6 +789,7 @@ components:
         amount:
           type: number
           title: Amount
+      additionalProperties: false
       type: object
       required:
       - currency
@@ -780,6 +809,7 @@ components:
             $ref: '#/components/schemas/JsonValue'
           type: object
           title: Details
+      additionalProperties: false
       type: object
       required:
       - code
@@ -822,6 +852,7 @@ components:
           type: string
           format: date-time
           title: Updated At
+      additionalProperties: false
       type: object
       required:
       - request_id
@@ -845,6 +876,7 @@ components:
         confirm:
           type: boolean
           title: Confirm
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -865,6 +897,7 @@ components:
           title: Ride Id
         ride_status:
           $ref: '#/components/schemas/RideStatus'
+      additionalProperties: false
       type: object
       required:
       - quote_id
@@ -885,6 +918,7 @@ components:
           $ref: '#/components/schemas/CurrentLocation'
         destination:
           $ref: '#/components/schemas/Destination'
+      additionalProperties: false
       type: object
       required:
       - user_id
@@ -910,6 +944,7 @@ components:
           type: string
           format: date-time
           title: Expires At
+      additionalProperties: false
       type: object
       required:
       - quote_id

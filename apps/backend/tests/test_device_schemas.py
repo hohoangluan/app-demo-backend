@@ -112,3 +112,122 @@ def test_device_report_rejects_payload_inconsistent_with_execution_state(
                 "error": error,
             }
         )
+
+
+def test_device_register_request_rejects_unexpected_field() -> None:
+    """Reject an undocumented field on the device registration request."""
+    with pytest.raises(ValidationError):
+        DeviceRegisterRequest.model_validate(
+            {
+                "user_id": "user-123",
+                "device_id": "android-device-123",
+                "platform": "android",
+                "push_token": "fcm-token",
+                "extra": "nope",
+            }
+        )
+
+
+def test_device_report_request_rejects_unexpected_field() -> None:
+    """Reject an undocumented field on the device action report."""
+    with pytest.raises(ValidationError):
+        DeviceReportRequest.model_validate(
+            REPORT_BASE
+            | {
+                "execution_state": ExecutionState.SUCCEEDED,
+                "result": RESULT,
+                "error": None,
+                "extra": "nope",
+            }
+        )
+
+
+@pytest.mark.parametrize("field", ["user_id", "device_id", "push_token"])
+def test_device_register_request_rejects_empty_string_field(field: str) -> None:
+    """Reject whitespace-only client-supplied fields on device registration."""
+    payload = {
+        "user_id": "user-123",
+        "device_id": "android-device-123",
+        "platform": "android",
+        "push_token": "fcm-token",
+    }
+
+    with pytest.raises(ValidationError):
+        DeviceRegisterRequest.model_validate(payload | {field: "   "})
+
+
+def test_device_register_request_trims_whitespace() -> None:
+    """Store trimmed values for client-supplied device registration fields."""
+    request = DeviceRegisterRequest.model_validate(
+        {
+            "user_id": "  user-123  ",
+            "device_id": "  android-device-123  ",
+            "platform": "android",
+            "push_token": "  fcm-token  ",
+        }
+    )
+
+    assert request.user_id == "user-123"
+    assert request.device_id == "android-device-123"
+    assert request.push_token == "fcm-token"
+
+
+@pytest.mark.parametrize("field", ["user_id", "device_id"])
+def test_device_report_request_rejects_empty_string_field(field: str) -> None:
+    """Reject whitespace-only client-supplied fields on the device report."""
+    with pytest.raises(ValidationError):
+        DeviceReportRequest.model_validate(
+            REPORT_BASE
+            | {
+                "execution_state": ExecutionState.SUCCEEDED,
+                "result": RESULT,
+                "error": None,
+                field: "   ",
+            }
+        )
+
+
+def test_device_report_request_trims_whitespace() -> None:
+    """Store trimmed values for client-supplied device report fields."""
+    request = DeviceReportRequest.model_validate(
+        REPORT_BASE
+        | {
+            "user_id": "  user-123  ",
+            "device_id": "  android-device-123  ",
+            "execution_state": ExecutionState.SUCCEEDED,
+            "result": RESULT,
+            "error": None,
+        }
+    )
+
+    assert request.user_id == "user-123"
+    assert request.device_id == "android-device-123"
+
+
+def test_device_report_request_rejects_naive_timestamp() -> None:
+    """Reject a naive report timestamp with no UTC offset."""
+    with pytest.raises(ValidationError):
+        DeviceReportRequest.model_validate(
+            REPORT_BASE
+            | {
+                "execution_state": ExecutionState.SUCCEEDED,
+                "result": RESULT,
+                "error": None,
+                "timestamp": "2026-08-02T10:00:00",
+            }
+        )
+
+
+def test_device_report_request_normalizes_non_utc_timestamp() -> None:
+    """Normalize a non-UTC report timestamp offset to UTC."""
+    request = DeviceReportRequest.model_validate(
+        REPORT_BASE
+        | {
+            "execution_state": ExecutionState.SUCCEEDED,
+            "result": RESULT,
+            "error": None,
+            "timestamp": "2026-08-02T17:00:00+07:00",
+        }
+    )
+
+    assert request.timestamp.isoformat() == "2026-08-02T10:00:00+00:00"

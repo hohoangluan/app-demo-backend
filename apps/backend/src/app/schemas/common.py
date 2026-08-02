@@ -1,13 +1,55 @@
 """Common Public API envelopes and request status schemas."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, JsonValue, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from app.actions import Operation
+
+# Reusable coordinate constraints shared by every request/result schema that
+# carries a latitude or longitude, so the bounds are defined exactly once.
+Latitude = Annotated[float, Field(ge=-90, le=90)]
+Longitude = Annotated[float, Field(ge=-180, le=180)]
+
+
+def _trim_and_reject_empty(value: str) -> str:
+    """Trim surrounding whitespace and reject empty/whitespace-only strings.
+
+    The trimmed value is what gets stored: callers that submit
+    ``" user-1 "`` end up with ``"user-1"``, not the original untrimmed
+    string.
+    """
+    trimmed = value.strip()
+    if not trimmed:
+        message = "value must not be empty or whitespace-only"
+        raise ValueError(message)
+    return trimmed
+
+
+# Reusable type for client-supplied free-text request fields: trims
+# whitespace and rejects the result if it is empty.
+TrimmedNonEmptyStr = Annotated[str, AfterValidator(_trim_and_reject_empty)]
+
+
+def _require_aware_utc(value: datetime) -> datetime:
+    """Reject naive datetimes and normalize aware datetimes to UTC.
+
+    A missing UTC offset is rejected outright. A datetime with a non-UTC
+    offset is accepted and converted to the equivalent UTC instant (the
+    offset is not rejected) so every stored/serialized datetime uses a
+    single, consistent UTC representation.
+    """
+    if value.tzinfo is None:
+        message = "datetime must be timezone-aware"
+        raise ValueError(message)
+    return value.astimezone(UTC)
+
+
+# Reusable type requiring a timezone-aware datetime, normalized to UTC.
+AwareUtcDatetime = Annotated[datetime, AfterValidator(_require_aware_utc)]
 
 
 class RequestState(StrEnum):
@@ -22,6 +64,8 @@ class RequestState(StrEnum):
 class PublicError(BaseModel):
     """Stable error representation shared by Public responses."""
 
+    model_config = ConfigDict(extra="forbid")
+
     code: str
     message: str
     details: dict[str, JsonValue]
@@ -30,15 +74,19 @@ class PublicError(BaseModel):
 class AcceptedData(BaseModel):
     """Data returned after a function request is accepted."""
 
+    model_config = ConfigDict(extra="forbid")
+
     request_id: UUID
     operation: Operation
     request_state: Literal[RequestState.PROCESSING] = RequestState.PROCESSING
     status_url: str
-    accepted_at: datetime
+    accepted_at: AwareUtcDatetime
 
 
 class OkResponse[DataT](BaseModel):
     """Successful Public API envelope."""
+
+    model_config = ConfigDict(extra="forbid")
 
     status: Literal["ok"] = "ok"
     data: DataT
@@ -47,6 +95,8 @@ class OkResponse[DataT](BaseModel):
 class ErrorResponse(BaseModel):
     """Synchronous Public API error envelope."""
 
+    model_config = ConfigDict(extra="forbid")
+
     status: Literal["error"] = "error"
     error: PublicError
 
@@ -54,13 +104,15 @@ class ErrorResponse(BaseModel):
 class RequestStatusData[ResultT](BaseModel):
     """Public request status representation without a callback envelope decision."""
 
+    model_config = ConfigDict(extra="forbid")
+
     request_id: UUID
     operation: Operation
     request_state: RequestState
     result: ResultT | None = None
     error: PublicError | None = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareUtcDatetime
+    updated_at: AwareUtcDatetime
 
     @model_validator(mode="after")
     def validate_state_payload(self) -> Self:

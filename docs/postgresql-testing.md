@@ -50,17 +50,41 @@ uv sync --frozen
 uv run pytest
 ```
 
-At the time this test infrastructure was scaffolded, the repository did not yet
-contain `alembic.ini`, an Alembic environment, or a migration dependency. Do not
-substitute `Base.metadata.create_all` or invent a migration command. Once the
-Alembic scaffold exists, the database workflow must run its checked-in upgrade
-command against a clean database before `pytest`; the expected project command
-is `uv run alembic upgrade head`, provided that it is then defined by the actual
-backend configuration.
+Do not substitute `Base.metadata.create_all` for a migration. Tests under
+`apps/backend/tests/integration/` apply the checked-in Alembic migration for
+you: `tests/integration/conftest.py` runs `alembic upgrade head` (via the
+`alembic` console entry point next to the active interpreter, using the
+existing `alembic/env.py` mechanism driven by the `DATABASE_URL` environment
+variable) once per test session, against a clean schema, before any test in
+that directory runs.
 
 Tests and migration tooling must refuse a URL whose database name is not clearly
 test-only. Never point `TEST_DATABASE_URL` at the development or production
-database.
+database. `tests/integration/conftest.py` enforces this with
+`ensure_test_only_database_url`, which raises `NonTestDatabaseUrlError` unless
+the database name contains `test` (case-insensitive).
+
+When `TEST_DATABASE_URL` is unset, every test under `tests/integration/` skips
+cleanly with an explanatory reason instead of failing — PostgreSQL integration
+tests are opt-in, and `uv run pytest` with no Postgres running still passes.
+When it is set, `tests/integration/conftest.py` provides:
+
+- `test_database_url` — the validated URL (session-scoped).
+- `postgres_engine` — one migrated `AsyncEngine` shared for the whole test
+  session (session-scoped, built with `NullPool` so it stays safe to use
+  across the separate event loop pytest-asyncio creates for each test).
+- `postgres_session_factory` — the session factory bound to that engine.
+- `db_session` — a per-test `AsyncSession`; after the test, the fixture
+  truncates the `operations` and `devices` tables so the next test starts
+  from a clean, empty state. The migration itself is applied only once per
+  session (not per test), so future tests that need two independent
+  concurrent connections (for example to exercise `FOR UPDATE SKIP LOCKED`
+  claim races) can still open their own connections against
+  `postgres_engine` and observe each other's committed writes.
+
+Write new PostgreSQL integration tests under `apps/backend/tests/integration/`
+so they automatically pick up these fixtures; tests elsewhere are unaffected
+and keep running without Docker.
 
 ## Status and cleanup
 

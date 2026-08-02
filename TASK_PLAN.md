@@ -30,7 +30,7 @@
 - [x] Tạo cấu trúc `contracts`, `docs` và CI nền tảng.
 - [x] Cài/khả dụng hóa `uv` và sinh `uv.lock`.
 - [x] Tạo initial Git commit chứa scaffold và `uv.lock` khi được yêu cầu (user đã yêu cầu ở session 2).
-- [x] Khởi tạo Android project Kotlin/Compose một module tại `apps/android` (MainActivity, OverviewScreen/OverviewUiState, AppDemoTheme, unit test). Gradle `test lint assembleDebug` **chưa chạy được** vì Android SDK licenses chưa accept; user tự chạy sau, cần verify ở session sau.
+- [x] Khởi tạo Android project Kotlin/Compose một module tại `apps/android` (MainActivity, OverviewScreen/OverviewUiState, AppDemoTheme, unit test). User đã accept SDK licenses và cài `platforms;android-37`/`build-tools;36.0.0`; `gradlew.bat test lint assembleDebug` chạy PowerShell (không phải Git Bash — Git Bash gây lỗi path) verified: 2 unit test pass, lint 0 errors/8 warning không chặn (OldTargetApi, version bump, ModifierParameter, DataExtractionRules, MissingApplicationIcon — cosmetic, chấp nhận được ở prototype), `assembleDebug` BUILD SUCCESSFUL.
 - [x] Định nghĩa đủ Pydantic schema cho 9 Public actions và 2 Device endpoints (`app/schemas/service_requests.py`, `service_results.py`, `device.py`, `common.py`).
 - [x] Export riêng Public/Internal OpenAPI từ schema thực thi (`scripts/export_openapi.py`, `contracts/public-api.openapi.yaml`, `contracts/device-api.openapi.yaml`).
 - [x] Thêm contract tests cho response envelope, examples và action mapping (`tests/test_openapi_contracts.py`, `test_service_requests.py`, `test_service_results.py`, `test_device_schemas.py`, `test_actions.py`).
@@ -50,9 +50,9 @@
 - [x] SQLAlchemy async engine/session và cấu hình fail-fast (`app/database.py`, `app/config.py`; task `P1-DB-01`).
 - [x] Models `devices`, `operations` đúng blueprint (`app/models/device.py`, `operation.py`, `enums.py`; task `P1-DB-02`/`P1-DB-03`).
 - [x] Alembic baseline migration; test cả database sạch và upgrade path — verified session 2 bằng `alembic upgrade head` → `downgrade base` → `upgrade head` trên PostgreSQL thật (test-compose), cột/check/index khớp chính xác `docs/p1-database-plan.md` (task `P1-DB-04`, tương ứng `PG-01`/`PG-02`).
-- [ ] PostgreSQL test harness tái sử dụng được cho pytest (fixture tạo DB sạch + chạy migration mỗi test) — hiện chỉ verify thủ công qua `infra/compose.test.yaml`, chưa có fixture/test tự động (task `P1-DB-05`).
-- [ ] Device repository (`P1-DB-06`), Operation insert/read (`P1-DB-07`), delivery claim (`P1-DB-08`), callback claim (`P1-DB-09`), report/timeout transitions (`P1-DB-10`) — chưa cài đặt, chưa có code trong `app/`.
-- [ ] Áp dụng chính sách validation `D-07` (đã CHỐT): `extra="forbid"`, trim/reject chuỗi rỗng, timezone-aware UTC bắt buộc, giữ nguyên coordinate constraints — vào toàn bộ Public/Internal Pydantic schema hiện có, kèm test khẳng định reject extra field/chuỗi rỗng/naive datetime.
+- [x] PostgreSQL test harness tái sử dụng được cho pytest (task `P1-DB-05`, session 2 qua subagent, verified độc lập). `apps/backend/tests/integration/conftest.py`: fixture `test_database_url` (đọc `TEST_DATABASE_URL`, `pytest.skip` nếu unset), guard `ensure_test_only_database_url` (reject DB name không chứa `"test"`), `postgres_engine`/`postgres_session_factory` (session-scoped, chạy `alembic upgrade head` một lần qua subprocess — không dùng `Base.metadata.create_all`), `db_session` (function-scoped, `TRUNCATE operations, devices` sau mỗi test để giữ connection độc lập cho race test tương lai). `apps/backend/tests/integration/test_postgres_harness.py`: 4 test (guard x2, schema/constraint check qua `information_schema`/`pg_constraint`, insert round-trip tôn trọng mọi CHECK constraint). Verify độc lập: full suite 168 passed/2 skipped không có Postgres; 170 passed (bao gồm cả 4 integration test) khi có `TEST_DATABASE_URL` trỏ tới `infra/compose.test.yaml` (port 57432). `docs/postgresql-testing.md` đã cập nhật đoạn cũ nói "chưa có Alembic".
+- [ ] Device repository (`P1-DB-06`), Operation insert/read (`P1-DB-07`), delivery claim (`P1-DB-08`), callback claim (`P1-DB-09`), report/timeout transitions (`P1-DB-10`) — chưa cài đặt, chưa có code trong `app/`. Harness ở trên đã sẵn sàng để viết các test này.
+- [x] Áp dụng chính sách validation `D-07` (đã CHỐT) vào toàn bộ Public/Internal Pydantic schema (session 2 qua subagent, verified độc lập): `extra="forbid"` trên mọi model ở `app/schemas/*.py`; `TrimmedNonEmptyStr` (reusable, `common.py`) cho field free-text do client gửi (`user_id`, `device_id`, `push_token`, `quote_id`, `song`, `navigation_id`, `name`); `Latitude`/`Longitude` reusable dùng lại ở `Destination` và `NavigationDestination` (trước đó là `float` không giới hạn — lỗ hổng đã đóng); `AwareUtcDatetime` reusable (reject naive datetime, normalize non-UTC offset về UTC) cho mọi field datetime. OpenAPI đã regenerate qua `scripts/export_openapi.py`, `--check` pass. Không thêm giới hạn độ dài/số (đúng theo D-07: "phải ghi rõ trong contract trước khi enforce"); không đổi logic `result`/`error` optional trên `DeviceReportRequest` (nằm ngoài phạm vi, đã có `model_validator` riêng).
 - [ ] Structured logging, redaction và request correlation.
 - [ ] Bearer authentication cho Public/Device API và ownership (thiết kế đã có ở `docs/p1-api-plan.md`, chưa cài đặt code).
 - [ ] Operation service với canonical fingerprint/idempotency.
@@ -125,6 +125,12 @@ Ghi chính xác lệnh, ngày và kết quả. Không đánh dấu hoàn tất n
 | 2026-08-02 | Compose (session 2) | `docker compose -f infra/compose.yaml config --quiet` | Pass |
 | 2026-08-02 | Container (session 2) | `docker compose -f infra/compose.yaml build backend` | Pass — build lại sau khi đổi dependency |
 | 2026-08-02 | Migration trên PostgreSQL thật (session 2) | `docker compose -f infra/compose.test.yaml up -d --wait postgres-test` (port 57432, port 55432 mặc định bị Windows chặn) rồi `alembic upgrade head` → `alembic downgrade base` → `alembic upgrade head` | Pass — hai bảng, đúng cột/check/index như `docs/p1-database-plan.md`; đã xác nhận bằng `psql \d devices` và `\d operations` |
+| 2026-08-02 | Android (session 2, sau khi user accept SDK licenses) | PowerShell: `$env:JAVA_HOME/$env:ANDROID_HOME` set thủ công, `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — `OverviewUiStateTest` 2/2 test pass; lint 0 errors, 8 warning cosmetic; `assembleDebug` BUILD SUCCESSFUL (51 tasks) |
+| 2026-08-02 | D-07 + P1-DB-05 (session 2, qua 2 subagent song song, verify độc lập lại bởi main session) | `uv run ruff format --check .` / `ruff check .` / `mypy src tests scripts` | Pass — 40/41 file formatted, all lint checks pass, 37 source files no mypy issue |
+| 2026-08-02 | D-07 + P1-DB-05 (session 2) | `uv run pytest -q` (không có `TEST_DATABASE_URL`) | Pass — 168 passed, 2 skipped (tăng từ baseline 98, không có test nào bị làm yếu/xóa) |
+| 2026-08-02 | P1-DB-05 (session 2) | `docker compose -f infra/compose.test.yaml up -d --wait postgres-test` (port 57432) + `TEST_DATABASE_URL=...` `uv run pytest -q` | Pass — 170 passed (bao gồm 4 test PostgreSQL integration mới chạy thật, không skip); teardown `docker compose down --remove-orphans` sau khi verify |
+| 2026-08-02 | D-07 (session 2) | `uv run python scripts/export_openapi.py` rồi `--check` | Pass — regenerate xong, "OpenAPI artifacts are up to date." |
+| 2026-08-02 | D-07 + P1-DB-05 (session 2) | `uv build` | Pass — sdist và wheel |
 
 ## Blockers và quyết định
 
@@ -159,6 +165,12 @@ Ghi chính xác lệnh, ngày và kết quả. Không đánh dấu hoàn tất n
 - Cập nhật `TASK_PLAN.md`: đánh dấu các mục P0 đã hoàn tất thực sự, thêm task P1 database (`P1-DB-01`–`P1-DB-04` done, `P1-DB-05`+ chưa làm), thêm việc còn thiếu (D-07 validation policy chưa cài đặt), cập nhật bảng evidence và blockers.
 - Đưa hướng dẫn accept Android SDK license cho user tự chạy (không tự động pipe "y").
 - Tạo initial Git commit theo yêu cầu của user (xem commit message).
+- User accept Android SDK licenses xong, báo lại. Verify Android build qua PowerShell (Git Bash gây lỗi path khi gọi `gradlew.bat`, chuyển sang PowerShell native): `test lint assembleDebug` pass.
+- User yêu cầu chạy subagent hoàn thành task. Dispatch 2 subagent song song (background), phạm vi độc lập nhau, không cho commit hoặc sửa `TASK_PLAN.md`/`CONTRACT_DECISIONS.md`:
+  1. `P1-DB-05` PostgreSQL test harness (pytest fixture reusable, migration-once-per-session + truncate-per-test, guard chặn URL không phải test-db).
+  2. Áp dụng `D-07` validation policy vào toàn bộ Public/Internal Pydantic schema.
+- Cả hai subagent hoàn thành, tự báo cáo đầy đủ file thay đổi/judgment call/lệnh verify. Main session verify độc lập lại toàn bộ (không tin báo cáo suông): đọc diff thật, tự chạy `ruff format/check`, `mypy`, `pytest` không DB (168 passed/2 skipped), tự spin PostgreSQL thật và chạy lại (170 passed, 4 integration test chạy thật không skip), tự chạy `export_openapi.py --check` và `uv build`. Tất cả pass, không phát hiện sai lệch so với báo cáo subagent.
+- Cập nhật `TASK_PLAN.md`: đánh dấu `P1-DB-05` và D-07 validation policy hoàn tất với bằng chứng; ghi rõ `P1-DB-06` đến `P1-DB-10` (repository layer) vẫn chưa làm, giờ đã có harness sẵn sàng để bắt đầu.
 
 ## Protocol tiếp tục ở session mới
 
