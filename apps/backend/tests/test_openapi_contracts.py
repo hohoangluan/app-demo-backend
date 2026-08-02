@@ -47,6 +47,8 @@ def test_public_and_device_contract_paths_are_separated(test_app: FastAPI) -> No
         "/health/ready",
         "/api/v1/requests/{request_id}",
         "/api/v1/service/music/volume",
+        "/api/v1/device/register",
+        "/api/v1/device/report",
     }
 
 

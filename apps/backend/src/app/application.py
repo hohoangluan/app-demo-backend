@@ -3,11 +3,13 @@
 from fastapi import FastAPI
 
 from app import __version__
+from app.api.device import router as device_router
 from app.api.health import router as health_router
 from app.api.service import router as service_router
 from app.api.status import router as status_router
 from app.config import Settings
 from app.errors import register_exception_handlers
+from app.lifespan import application_lifespan
 from app.logging import RequestCorrelationMiddleware, setup_logging
 
 
@@ -18,8 +20,10 @@ def create_app(settings: Settings) -> FastAPI:
     application = FastAPI(
         title="App Communication Server",
         version=__version__,
+        lifespan=application_lifespan,
     )
     application.state.settings = settings
+    application.state.ready = False
 
     # Middleware
     application.add_middleware(RequestCorrelationMiddleware)
@@ -27,9 +31,10 @@ def create_app(settings: Settings) -> FastAPI:
     # Exception handlers
     register_exception_handlers(application)
 
-    # P1 changes this only after PostgreSQL and managed workers finish bootstrapping.
-    application.state.ready = False
+    # Routers
     application.include_router(health_router)
     application.include_router(status_router)
     application.include_router(service_router)
+    application.include_router(device_router)
+
     return application

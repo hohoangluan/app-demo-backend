@@ -1,13 +1,11 @@
 # Kế hoạch triển khai App Communication Server
 
 > Tracker bền vững qua nhiều session. Cập nhật file này sau mỗi thay đổi có ý nghĩa.
-> Nguồn contract: `project_context.md`. Blueprint: `architeture.md`. Quy tắc bắt buộc: `claude.md`.
-
-## Trạng thái hiện tại
+> Nguồn contract: `project_context.md`. Blueprint: `architeture.md`. Quy t�## Trạng thái hiện tại
 
 - Ngày cập nhật: 2026-08-02
-- Phase hiện tại: **P1 hoàn tất hoàn toàn (Database & API foundation fully verified); chuẩn bị chuyển sang P2 — Worker pipeline**.
-- Mục tiêu phiên hiện tại (session 3): hoàn thành các mục P1 còn lại gồm structured logging, redaction & request correlation middleware, Public Status API, và vertical slice đầu tiên `music_volume`. Chạy toàn bộ quality gates, bao gồm 244 unit, contract, API, và PostgreSQL integration tests trên container thật.
+- Phase hiện tại: **P2 hoàn tất hoàn toàn (Worker pipeline & Internal Device API fully verified); chuẩn bị chuyển sang P3 — Android pipeline**.
+- Mục tiêu phiên hiện tại (session 3): hoàn thành Phase 1 & Phase 2 backend (adapters, delivery/timeout/callback workers, worker runner, lifespan, device API `/register` và `/report`). Chạy toàn bộ quality gates, bao gồm 252 unit, contract, API, worker, và PostgreSQL integration tests trên container thật.
 - Môi trường đã xác nhận:
   - Python `3.13.12`, Docker `29.5.3`/Compose `v5.1.4`, `uv` hoạt động.
   - PostgreSQL test container `infra/compose.test.yaml` (port 57432).
@@ -61,6 +59,19 @@
 - [x] Bearer authentication cho Public/Device API (session 2 qua subagent, verified). `app/auth.py`: `require_public_client_principal` (HMAC-SHA256 domain-separated digest, `hmac.compare_digest`, mọi lỗi trả cùng 401 để không lộ thông tin), `require_public_scope(scope)` (403 nếu thiếu scope), `require_device_bearer_token` (chỉ gate, không có principal/scope — doc không định nghĩa Device-side client identity, giữ nguyên theo yêu cầu bảo thủ). `Settings` thêm `public_api_client_id`, `public_api_scopes` (validate non-empty/known scope), enforce hash format 64-hex cho cả Public/Device.
 - [x] Operation service với canonical fingerprint/idempotency (session 2 qua subagent, verified). `app/services/operation.py::OperationService.accept()`: `compute_request_fingerprint()` (SHA-256 của JSON canonical `{body, client_id, method, path}`, sort_keys, sau validation), map `OperationRepository` 3-way outcome → `AcceptOperationStatus.ACCEPTED`/`CONFLICT` (ACCEPTED dùng `operation.created_at` gốc kể cả duplicate, khớp D-10). `_initial_callback_state()`: `callback_url` unset → `NOT_REQUIRED`, set → `PENDING`.
 - [x] Status API (`app/api/status.py`, `GET /api/v1/requests/{request_id}`, scope `requests:read`, D-06 404 handling, `tests/api/test_status_api.py`).
+- [x] Vertical slice đầu tiên `music_volume` (`app/api/service.py`, `POST /api/v1/service/music/volume`, scope `service:execute`, D-10 original `accepted_at` idempotency, `tests/api/test_music_volume_api.py`, `tests/integration/test_music_volume_postgres.py`).
+- [x] PostgreSQL integration/API/contract tests cho P1 (toàn bộ 244 tests pass trên PostgreSQL thật).
+
+
+## P2 — Worker pipeline
+
+- [x] Delivery claim/lease/recovery với `FOR UPDATE SKIP LOCKED` (`app/workers/delivery.py`).
+- [x] Fake delivery adapter và FCM adapter boundary (`app/adapters/delivery.py`).
+- [x] Retry classification/backoff và invalid-token handling (`DeliveryWorker`, `CallbackWorker`).
+- [x] Timeout worker và report-timeout race handling (`app/workers/timeout.py`).
+- [x] Callback worker, SSRF allow-list và dead-letter state (`app/adapters/callback.py`, `app/workers/callback.py`).
+- [x] Concurrency, restart và idempotency tests trên PostgreSQL thật (252 tests pass).
+ API (`app/api/status.py`, `GET /api/v1/requests/{request_id}`, scope `requests:read`, D-06 404 handling, `tests/api/test_status_api.py`).
 - [x] Vertical slice đầu tiên `music_volume` (`app/api/service.py`, `POST /api/v1/service/music/volume`, scope `service:execute`, D-10 original `accepted_at` idempotency, `tests/api/test_music_volume_api.py`, `tests/integration/test_music_volume_postgres.py`).
 - [x] PostgreSQL integration/API/contract tests cho P1 (toàn bộ 244 tests pass trên PostgreSQL thật).
 

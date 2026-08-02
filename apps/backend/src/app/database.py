@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator  # noqa: TC003
 
-from fastapi import Request
+from fastapi import Request  # noqa: TC002
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -13,8 +13,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
-
-
 
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_name)s",
