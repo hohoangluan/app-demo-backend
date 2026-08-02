@@ -1,14 +1,14 @@
-package com.innostar.appdemo.dispatcher
+package com.youreyes.app.dispatcher
 
-import com.innostar.appdemo.actions.ActionExecutionResult
-import com.innostar.appdemo.actions.ActionRegistry
-import com.innostar.appdemo.data.AppDatabaseHelper
-import com.innostar.appdemo.model.CommandRecord
-import com.innostar.appdemo.model.DeviceReportPayload
-import com.innostar.appdemo.model.ExecutionState
-import com.innostar.appdemo.model.PendingReportRecord
-import com.innostar.appdemo.model.ReportErrorPayload
-import com.innostar.appdemo.network.DeviceApiClient
+import com.youreyes.app.actions.ActionExecutionResult
+import com.youreyes.app.actions.ActionRegistry
+import com.youreyes.app.data.AppDatabaseHelper
+import com.youreyes.app.model.CommandRecord
+import com.youreyes.app.model.DeviceReportPayload
+import com.youreyes.app.model.ExecutionState
+import com.youreyes.app.model.PendingReportRecord
+import com.youreyes.app.model.ReportErrorPayload
+import com.youreyes.app.network.DeviceApiClient
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date

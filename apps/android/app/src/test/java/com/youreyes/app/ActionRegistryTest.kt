@@ -1,8 +1,8 @@
-package com.innostar.appdemo
+package com.youreyes.app
 
-import com.innostar.appdemo.actions.ActionExecutionResult
-import com.innostar.appdemo.actions.ActionRegistry
-import com.innostar.appdemo.model.ActionType
+import com.youreyes.app.actions.ActionExecutionResult
+import com.youreyes.app.actions.ActionRegistry
+import com.youreyes.app.model.ActionType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

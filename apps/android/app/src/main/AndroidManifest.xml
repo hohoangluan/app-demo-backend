@@ -48,10 +48,7 @@
 
         <!--
             FCM Receiver — receives push commands from backend via Firebase.
-            Replace com.google.firebase.messaging.DEFAULT_NOTIFICATION_CHANNEL_ID
-            with your own channel ID once google-services.json is configured.
         -->
-        <!--
         <service
             android:name=".fcm.FcmPushReceiver"
             android:exported="false">
@@ -63,7 +60,8 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="appdemo_commands" />
-        -->
+
+
 
     </application>
 </manifest>

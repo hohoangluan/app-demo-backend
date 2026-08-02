@@ -1,7 +1,7 @@
-package com.innostar.appdemo.ui.overview
+package com.youreyes.app.ui.overview
 
-import com.innostar.appdemo.model.CommandRecord
-import com.innostar.appdemo.model.PendingReportRecord
+import com.youreyes.app.model.CommandRecord
+import com.youreyes.app.model.PendingReportRecord
 
 data class OverviewUiState(
     val serverUrl: String = "http://10.0.2.2:8000",

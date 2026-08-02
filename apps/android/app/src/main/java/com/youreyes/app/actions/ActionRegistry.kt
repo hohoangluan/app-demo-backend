@@ -1,12 +1,12 @@
-package com.innostar.appdemo.actions
+package com.youreyes.app.actions
 
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
-import com.innostar.appdemo.model.ActionType
-import com.innostar.appdemo.model.ReportErrorPayload
+import com.youreyes.app.model.ActionType
+import com.youreyes.app.model.ReportErrorPayload
 import org.json.JSONObject
 
 sealed class ActionExecutionResult {
@@ -101,16 +101,28 @@ class MediaPlayHandler : ActionHandler {
             val json = JSONObject(paramsJson)
             val song = json.optString("song", "Track")
             if (context != null) {
-                val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                // Try YouTube Music first (package: com.google.android.apps.youtube.music)
+                val ytMusicIntent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                    setPackage("com.google.android.apps.youtube.music")
                     putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
                     putExtra(MediaStore.EXTRA_MEDIA_TITLE, song)
+                    putExtra("query", song)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    context.startActivity(intent)
+                if (ytMusicIntent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(ytMusicIntent)
+                } else {
+                    // Fallback: generic media play intent (lets Android pick installed music app)
+                    val genericIntent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                        putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+                        putExtra(MediaStore.EXTRA_MEDIA_TITLE, song)
+                        putExtra("query", song)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(genericIntent)
                 }
             }
-            ActionExecutionResult.Success(mapOf("song" to song, "playback_status" to "playing"))
+            ActionExecutionResult.Success(mapOf("song" to song, "playback_status" to "playing", "app" to "youtube_music"))
         }.getOrElse {
             ActionExecutionResult.Error(
                 ReportErrorPayload("INVALID_PARAMS", "Invalid media_play params: ${it.message}")
@@ -118,6 +130,7 @@ class MediaPlayHandler : ActionHandler {
         }
     }
 }
+
 
 class NavigationStartHandler : ActionHandler {
     override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {

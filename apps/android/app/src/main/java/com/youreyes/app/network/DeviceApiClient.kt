@@ -1,7 +1,7 @@
-package com.innostar.appdemo.network
+package com.youreyes.app.network
 
-import com.innostar.appdemo.model.DeviceRegisterPayload
-import com.innostar.appdemo.model.DeviceReportPayload
+import com.youreyes.app.model.DeviceRegisterPayload
+import com.youreyes.app.model.DeviceReportPayload
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader

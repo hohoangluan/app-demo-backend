@@ -1,4 +1,4 @@
-package com.innostar.appdemo.ui.overview
+package com.youreyes.app.ui.overview
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.innostar.appdemo.R
+import com.youreyes.app.R
 
 @Composable
 fun OverviewScreen(

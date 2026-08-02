@@ -1,4 +1,4 @@
-package com.innostar.appdemo.model
+package com.youreyes.app.model
 
 import org.json.JSONObject
 import java.security.MessageDigest

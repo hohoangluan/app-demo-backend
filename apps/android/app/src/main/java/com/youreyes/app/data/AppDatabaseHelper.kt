@@ -1,11 +1,11 @@
-package com.innostar.appdemo.data
+package com.youreyes.app.data
 
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import com.innostar.appdemo.model.CommandRecord
-import com.innostar.appdemo.model.PendingReportRecord
+import com.youreyes.app.model.CommandRecord
+import com.youreyes.app.model.PendingReportRecord
 
 class AppDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 

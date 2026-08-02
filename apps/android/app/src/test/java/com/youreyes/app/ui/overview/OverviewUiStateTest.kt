@@ -1,4 +1,4 @@
-package com.innostar.appdemo.ui.overview
+package com.youreyes.app.ui.overview
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
