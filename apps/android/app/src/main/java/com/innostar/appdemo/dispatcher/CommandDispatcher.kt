@@ -27,7 +27,8 @@ sealed class DispatchResult {
 class CommandDispatcher(
     private val dbHelper: AppDatabaseHelper,
     private val apiClient: DeviceApiClient = DeviceApiClient(),
-    private val actionRegistry: ActionRegistry = ActionRegistry()
+    private val actionRegistry: ActionRegistry = ActionRegistry(),
+    private val context: android.content.Context? = null
 ) {
 
     fun processPushCommand(
@@ -59,7 +60,8 @@ class CommandDispatcher(
 
         // 3. Dispatch to handler
         val handler = actionRegistry.getHandler(action)
-        val executionResult = handler.execute(paramsJson)
+        val executionResult = handler.execute(context, paramsJson)
+
 
         val (executionState, resultData, errorPayload) = when (executionResult) {
             is ActionExecutionResult.Success -> Triple(ExecutionState.SUCCEEDED, executionResult.resultData, null)

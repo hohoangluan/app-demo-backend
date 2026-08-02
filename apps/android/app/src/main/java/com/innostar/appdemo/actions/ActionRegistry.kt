@@ -1,5 +1,10 @@
 package com.innostar.appdemo.actions
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.MediaStore
+import android.provider.Settings
 import com.innostar.appdemo.model.ActionType
 import com.innostar.appdemo.model.ReportErrorPayload
 import org.json.JSONObject
@@ -10,14 +15,22 @@ sealed class ActionExecutionResult {
 }
 
 interface ActionHandler {
-    fun execute(paramsJson: String): ActionExecutionResult
+    fun execute(context: Context?, paramsJson: String): ActionExecutionResult
 }
 
 class MusicVolumeHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val level = json.optInt("level", 50)
+            if (context != null) {
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                if (audioManager != null) {
+                    val maxVol = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                    val targetVol = (level * maxVol) / 100
+                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, targetVol, android.media.AudioManager.FLAG_SHOW_UI)
+                }
+            }
             ActionExecutionResult.Success(mapOf("level" to level, "status" to "applied"))
         }.getOrElse {
             ActionExecutionResult.Error(
@@ -28,10 +41,16 @@ class MusicVolumeHandler : ActionHandler {
 }
 
 class EmergencyCallHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val number = json.optString("number", "911")
+            if (context != null) {
+                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            }
             ActionExecutionResult.Success(mapOf("dialed_number" to number, "call_status" to "initiated"))
         }.getOrElse {
             ActionExecutionResult.Error(
@@ -42,11 +61,18 @@ class EmergencyCallHandler : ActionHandler {
 }
 
 class ContactCallHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
+            val name = json.optString("name", "Contact")
             val contactId = json.optString("contact_id", "default")
-            ActionExecutionResult.Success(mapOf("contact_id" to contactId, "call_status" to "initiated"))
+            if (context != null) {
+                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contactId")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            }
+            ActionExecutionResult.Success(mapOf("contact_name" to name, "contact_id" to contactId, "call_status" to "initiated"))
         }.getOrElse {
             ActionExecutionResult.Error(
                 ReportErrorPayload("INVALID_PARAMS", "Invalid contact_call params: ${it.message}")
@@ -56,7 +82,7 @@ class ContactCallHandler : ActionHandler {
 }
 
 class QuotesSpeakHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val text = json.optString("text", "Hello world")
@@ -70,10 +96,20 @@ class QuotesSpeakHandler : ActionHandler {
 }
 
 class MediaPlayHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
-            val song = json.optString("song", "Track 1")
+            val song = json.optString("song", "Track")
+            if (context != null) {
+                val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                    putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+                    putExtra(MediaStore.EXTRA_MEDIA_TITLE, song)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (intent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(intent)
+                }
+            }
             ActionExecutionResult.Success(mapOf("song" to song, "playback_status" to "playing"))
         }.getOrElse {
             ActionExecutionResult.Error(
@@ -84,11 +120,34 @@ class MediaPlayHandler : ActionHandler {
 }
 
 class NavigationStartHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
-            val navId = json.optString("navigation_id", "nav-1")
-            ActionExecutionResult.Success(mapOf("navigation_id" to navId, "nav_status" to "started"))
+            val destObj = json.optJSONObject("destination")
+            val lat = destObj?.optDouble("lat", 10.7769) ?: 10.7769
+            val lng = destObj?.optDouble("lng", 106.7009) ?: 106.7009
+            val address = destObj?.optString("address", "") ?: ""
+
+            if (context != null) {
+                val uri = if (address.isNotBlank()) {
+                    Uri.parse("google.navigation:q=${Uri.encode(address)}")
+                } else {
+                    Uri.parse("google.navigation:q=$lat,$lng")
+                }
+                val mapIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                    setPackage("com.google.android.apps.maps")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (mapIntent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(mapIntent)
+                } else {
+                    val genericIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=${Uri.encode(address)}")).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(genericIntent)
+                }
+            }
+            ActionExecutionResult.Success(mapOf("lat" to lat, "lng" to lng, "nav_status" to "started"))
         }.getOrElse {
             ActionExecutionResult.Error(
                 ReportErrorPayload("INVALID_PARAMS", "Invalid navigation_start params: ${it.message}")
@@ -98,10 +157,18 @@ class NavigationStartHandler : ActionHandler {
 }
 
 class CameraCaptureHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val mode = json.optString("mode", "photo")
+            if (context != null) {
+                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (intent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(intent)
+                }
+            }
             ActionExecutionResult.Success(mapOf("mode" to mode, "capture_status" to "captured"))
         }.getOrElse {
             ActionExecutionResult.Error(
@@ -112,10 +179,10 @@ class CameraCaptureHandler : ActionHandler {
 }
 
 class DisplayShowHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
-            val message = json.optString("message", "Display ON")
+            val message = json.optString("message", "Display Notice")
             ActionExecutionResult.Success(mapOf("message" to message, "display_status" to "rendered"))
         }.getOrElse {
             ActionExecutionResult.Error(
@@ -126,11 +193,17 @@ class DisplayShowHandler : ActionHandler {
 }
 
 class SystemSettingsHandler : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val key = json.optString("setting_key", "wifi")
-            ActionExecutionResult.Success(mapOf("setting_key" to key, "status" to "updated"))
+            if (context != null) {
+                val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            }
+            ActionExecutionResult.Success(mapOf("setting_key" to key, "status" to "opened"))
         }.getOrElse {
             ActionExecutionResult.Error(
                 ReportErrorPayload("INVALID_PARAMS", "Invalid system_settings params: ${it.message}")
@@ -140,7 +213,7 @@ class SystemSettingsHandler : ActionHandler {
 }
 
 class UnsupportedActionHandler(private val actionName: String) : ActionHandler {
-    override fun execute(paramsJson: String): ActionExecutionResult {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return ActionExecutionResult.Error(
             ReportErrorPayload("UNSUPPORTED_ACTION", "Action '$actionName' is not supported by Android client")
         )
