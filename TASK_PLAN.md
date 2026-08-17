@@ -229,6 +229,13 @@ Ghi chÃ­nh xÃ¡c lá»‡nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng Ä‘�
 - Khởi chạy Backend FastAPI Uvicorn Server thành công tại `http://localhost:8001` (`http://127.0.0.1:8001`).
 - Đã kiểm thử API Client (`test_real/run_real_e2e.py` với `music_volume`): request trả `202 Accepted`, worker dispatch và report hoàn tất, trạng thái trả về `succeeded` với kết quả `PASS`. Server hiện đang hoạt động liên tục tại port `8001`.
 
+### 2026-08-17 — Session 5
+
+- Đã xác nhận Firebase Admin SDK JSON được bỏ qua bởi rule `*firebase-adminsdk*.json` trong `.gitignore` và không còn được theo dõi trong working tree.
+- Đã rewrite lịch sử `main` để loại credential khỏi mọi commit, xóa refs/reflog backup và chạy `git gc --prune=now`.
+- Kiểm tra `git rev-list --all --objects`: pass — đường dẫn credential không còn trong refs. Kiểm tra blob cũ bằng `git cat-file -e`: pass — blob đã bị prune khỏi object store.
+- Không chạy test ứng dụng vì thay đổi chỉ liên quan đến lịch sử Git và nhật ký dự án; giữ nguyên toàn bộ thay đổi chưa commit của user.
+
 
 ## Protocol tiếp tục ở session mới
 
