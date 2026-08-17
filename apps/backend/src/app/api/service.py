@@ -12,10 +12,12 @@ from app.auth import ClientPrincipal, require_public_scope
 from app.config import PublicApiScope, Settings, get_app_settings
 from app.database import get_db_session
 from app.errors import RequestIdConflictError
+from app.repositories.glasses_device import GlassesDeviceRepository
 from app.schemas.common import AcceptedData, AcceptedResponse
 from app.schemas.service_requests import (  # noqa: TC001
     ContactCallRequest,
     EmergencyCallRequest,
+    LocationGetRequest,
     MusicPlayRequest,
     MusicStopRequest,
     MusicVolumeRequest,
@@ -25,6 +27,7 @@ from app.schemas.service_requests import (  # noqa: TC001
     RideQuoteRequest,
     ServiceRequest,
 )
+from app.services.glasses import resolve_glasses_device_owner
 from app.services.operation import AcceptOperationStatus, OperationService
 
 router = APIRouter(prefix="/api/v1/service", tags=["service"])
@@ -41,8 +44,13 @@ async def _accept_operation(
 ) -> AcceptedResponse:
     """Accept an operation for a specific action route."""
     route = ACTION_ROUTE_MAP[(HttpMethod.POST, path)]
+    glasses_repository = GlassesDeviceRepository(session)
+    user_id = await resolve_glasses_device_owner(glasses_repository, device_id=body.device_id)
+
     service = OperationService(session, settings)
-    result = await service.accept(client_id=principal.client_id, route=route, request=body)
+    result = await service.accept(
+        client_id=principal.client_id, user_id=user_id, route=route, request=body
+    )
 
     if result.status is AcceptOperationStatus.CONFLICT:
         raise RequestIdConflictError(_REQUEST_ID_CONFLICT_MSG)
@@ -223,4 +231,23 @@ async def post_ride_confirm(
     """Accept or reuse a ride confirm operation."""
     return await _accept_operation(
         "/api/v1/service/ride/confirm", body, principal, session, settings
+    )
+
+
+@router.post(
+    "/location/get",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def post_location_get(
+    body: LocationGetRequest,
+    principal: Annotated[
+        ClientPrincipal, Depends(require_public_scope(PublicApiScope.SERVICE_EXECUTE))
+    ],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> AcceptedResponse:
+    """Accept or reuse a device location lookup operation."""
+    return await _accept_operation(
+        "/api/v1/service/location/get", body, principal, session, settings
     )

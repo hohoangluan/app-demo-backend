@@ -357,9 +357,9 @@ components:
       - $ref: '#/components/schemas/ContactCallResult'
     ContactCallRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -375,7 +375,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       - name
       title: ContactCallRequest
@@ -446,9 +446,9 @@ components:
       description: Destination represented by an address, a coordinate pair, or both.
     EmergencyCallRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -461,7 +461,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       title: EmergencyCallRequest
       description: Start the configured emergency call flow.
@@ -521,9 +521,9 @@ components:
     JsonValue: {}
     MusicPlayRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -541,7 +541,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       - song
       title: MusicPlayRequest
@@ -576,9 +576,9 @@ components:
       description: Final result after starting music playback.
     MusicStopRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -586,7 +586,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       title: MusicStopRequest
       description: Stop active music playback.
@@ -604,9 +604,9 @@ components:
       description: Final result after stopping music playback.
     MusicVolumeRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -625,7 +625,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       title: MusicVolumeRequest
       description: Change volume by one relative direction or one absolute level.
@@ -672,9 +672,9 @@ components:
       description: Provider-normalized navigation destination.
     NavigationStartRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -684,7 +684,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       - destination
       title: NavigationStartRequest
@@ -715,9 +715,9 @@ components:
       description: Final result after starting walking guidance.
     NavigationStopRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -728,7 +728,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       - navigation_id
       title: NavigationStopRequest
@@ -873,9 +873,9 @@ components:
       title: RequestStatusData[ActionResult]
     RideConfirmRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -889,7 +889,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       - quote_id
       - confirm
@@ -917,9 +917,9 @@ components:
       description: Final result for confirming or cancelling a ride quote.
     RideQuoteRequest:
       properties:
-        user_id:
+        device_id:
           type: string
-          title: User Id
+          title: Device Id
         request_id:
           type: string
           format: uuid
@@ -931,7 +931,7 @@ components:
       additionalProperties: false
       type: object
       required:
-      - user_id
+      - device_id
       - request_id
       - current_location
       - destination

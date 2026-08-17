@@ -211,7 +211,9 @@ Handler chỉ giao tiếp qua interface của adapter. Nhà cung cấp được 
 - Content type: `application/json`.
 - Thời gian: ISO 8601 UTC.
 - `request_id`: UUID do API client sinh, dùng cho idempotency.
-- `user_id`: định danh người dùng có thiết bị Android đã đăng ký.
+- `device_id`: định danh thiết bị kính đã pairing (xem mục 6.13) với người
+  dùng có thiết bị Android đã đăng ký. Server tự tra `user_id` nội bộ từ
+  `device_id`; API client không cần biết `user_id`.
 - API client đăng ký `callback_url` trong cấu hình client.
 
 Các JSON example trong tài liệu là JSON hợp lệ. Phần giải thích từng trường được đặt trong bảng ngay sau example.
@@ -234,7 +236,7 @@ Các trường chung trong mọi request body:
 
 | Trường | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng sở hữu điện thoại Android cần thực thi chức năng |
+| `device_id` | Có | string | Thiết bị kính đã pairing (mục 6.13) với người dùng cần thực thi chức năng |
 | `request_id` | Có | UUID string | Định danh duy nhất của request; gửi lại cùng giá trị không tạo lần thực thi mới |
 
 Mọi function endpoint trả `HTTP 202 Accepted`:
@@ -399,7 +401,7 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
   "current_location": {
     "lat": 10.7769,
@@ -415,7 +417,7 @@ Request:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng cần lấy báo giá trên điện thoại |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng cần lấy báo giá trên điện thoại |
 | `request_id` | Có | UUID string | ID duy nhất của lần lấy báo giá |
 | `current_location` | Có | object | Vị trí bắt đầu chuyến đi |
 | `current_location.lat` | Có | number | Vĩ độ hiện tại, từ `-90` đến `90` |
@@ -462,7 +464,7 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440001",
   "quote_id": "quote-123",
   "confirm": true
@@ -471,7 +473,7 @@ Request:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng sở hữu báo giá |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng sở hữu báo giá |
 | `request_id` | Có | UUID string | ID duy nhất của yêu cầu xác nhận/hủy |
 | `quote_id` | Có | string | ID nhận từ kết quả `ride/quote` |
 | `confirm` | Có | boolean | `true`: đặt xe; `false`: hủy quy trình đặt xe |
@@ -520,7 +522,7 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440002",
   "song": "Nơi này có anh - Sơn Tùng M-TP",
   "volume": 60
@@ -529,7 +531,7 @@ Request:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng cần phát nhạc trên điện thoại |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng cần phát nhạc trên điện thoại |
 | `request_id` | Có | UUID string | ID duy nhất của lệnh phát nhạc |
 | `song` | Có | string | Chuỗi tìm kiếm gồm tên bài hát, nghệ sĩ hoặc cả hai |
 | `volume` | Không | integer | Mức âm lượng ban đầu, từ `0` đến `100` |
@@ -566,14 +568,14 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440003"
 }
 ```
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng có phiên phát nhạc cần dừng |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng có phiên phát nhạc cần dừng |
 | `request_id` | Có | UUID string | ID duy nhất của lệnh dừng nhạc |
 
 Kết quả cuối trong `data.result`:
@@ -600,7 +602,7 @@ Request theo hướng:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440004",
   "direction": "up"
 }
@@ -610,7 +612,7 @@ Request theo mức tuyệt đối:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440004",
   "level": 70
 }
@@ -618,7 +620,7 @@ Request theo mức tuyệt đối:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng có âm lượng điện thoại cần thay đổi |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng có âm lượng điện thoại cần thay đổi |
 | `request_id` | Có | UUID string | ID duy nhất của lệnh thay đổi âm lượng |
 | `direction` | Có điều kiện | enum | `up` hoặc `down`; không gửi cùng `level` |
 | `level` | Có điều kiện | integer | Mức âm lượng tuyệt đối `0..100`; không gửi cùng `direction` |
@@ -649,7 +651,7 @@ Request theo địa chỉ:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440005",
   "destination": {
     "address": "Bưu điện Thành phố Hồ Chí Minh"
@@ -661,7 +663,7 @@ Request theo tọa độ:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440005",
   "destination": {
     "lat": 10.7798,
@@ -672,7 +674,7 @@ Request theo tọa độ:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng có điện thoại cần bắt đầu điều hướng |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng có điện thoại cần bắt đầu điều hướng |
 | `request_id` | Có | UUID string | ID duy nhất của lệnh bắt đầu điều hướng |
 | `destination` | Có | object | Điểm đích của phiên điều hướng |
 | `destination.address` | Có điều kiện | string | Địa chỉ điểm đích; dùng khi không gửi tọa độ |
@@ -718,7 +720,7 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440006",
   "navigation_id": "nav-123"
 }
@@ -726,7 +728,7 @@ Request:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng sở hữu phiên điều hướng |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng sở hữu phiên điều hướng |
 | `request_id` | Có | UUID string | ID duy nhất của lệnh dừng điều hướng |
 | `navigation_id` | Có | string | ID nhận từ kết quả `navigation/start` |
 
@@ -756,14 +758,14 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440007"
 }
 ```
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng có số khẩn cấp đã cấu hình trên điện thoại |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng có số khẩn cấp đã cấu hình trên điện thoại |
 | `request_id` | Có | UUID string | ID duy nhất của lần kích hoạt gọi khẩn cấp |
 
 Ứng dụng sử dụng số khẩn cấp đã cấu hình trên điện thoại, gửi vị trí qua SMS và thực hiện chu kỳ gọi.
@@ -802,7 +804,7 @@ Request:
 
 ```json
 {
-  "user_id": "user-123",
+  "device_id": "glasses-123",
   "request_id": "550e8400-e29b-41d4-a716-446655440008",
   "name": "Nguyễn Văn A"
 }
@@ -810,7 +812,7 @@ Request:
 
 | Trường request | Bắt buộc | Kiểu | Ý nghĩa |
 |---|---|---|---|
-| `user_id` | Có | string | Người dùng sở hữu danh bạ cần tìm kiếm |
+| `device_id` | Có | string | Thiết bị kính đã pairing với người dùng sở hữu danh bạ cần tìm kiếm |
 | `request_id` | Có | UUID string | ID duy nhất của lệnh gọi liên hệ |
 | `name` | Có | string | Tên liên hệ cần tìm; không được rỗng |
 
@@ -947,6 +949,83 @@ Response `HTTP 200`:
 | `status` | string | `ok` khi server nhận report |
 | `data.request_id` | UUID string | Request đã được cập nhật |
 | `data.report_received` | boolean | `true` khi report đã được ghi nhận |
+
+### 6.13a. Internal Glasses Pairing API
+
+Cho phép app Android khai báo "device_id kính này thuộc về user_id này" khi
+người dùng nhập device_id kính vào app điện thoại. Cùng lớp tin cậy với
+`/api/v1/device/register` và `/api/v1/device/report` (Device Bearer token
+dùng chung) — app demo chưa có phiên đăng nhập riêng từng người dùng để dùng
+cơ chế khác. Một `device_id` kính chỉ pairing active với đúng một `user_id`
+tại một thời điểm; pairing mới cho cùng `user_id` sẽ tự hủy pairing active
+cũ của user đó.
+
+```http
+Authorization: Bearer <app_access_token>
+Content-Type: application/json
+```
+
+```http
+POST /api/v1/device/glasses/link
+```
+
+```json
+{
+  "user_id": "user-123",
+  "device_id": "glasses-abc"
+}
+```
+
+| Trường link request | Bắt buộc | Kiểu | Ý nghĩa |
+|---|---|---|---|
+| `user_id` | Có | string | Người dùng sở hữu app điện thoại thực hiện pairing |
+| `device_id` | Có | string | ID phần cứng của kính cần pairing |
+
+Response `HTTP 200`:
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "device_id": "glasses-abc",
+    "linked": true
+  }
+}
+```
+
+Pairing lại cùng `user_id`/`device_id` là idempotent, trả `200` như trên.
+Nếu `device_id` đang pairing active với `user_id` khác, trả `409` với
+`error.code = "GLASSES_DEVICE_OWNER_CONFLICT"` — không tự động chuyển chủ.
+
+```http
+POST /api/v1/device/glasses/unlink
+```
+
+```json
+{
+  "user_id": "user-123"
+}
+```
+
+Response `HTTP 200`:
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "unlinked": true
+  }
+}
+```
+
+| Trường unlink response | Kiểu | Ý nghĩa |
+|---|---|---|
+| `data.unlinked` | boolean | `true` nếu có pairing active bị hủy; `false` nếu `user_id` không có pairing nào |
+
+Mọi endpoint Public Service API (mục 6.4–6.12) resolve `device_id` trong
+request body sang `user_id` nội bộ qua bảng pairing này trước khi thực thi.
+`device_id` chưa từng pairing hoặc pairing đã bị unlink trả `404` với
+`error.code = "GLASSES_DEVICE_NOT_LINKED"`.
 
 ### 6.14. Internal Device Command
 

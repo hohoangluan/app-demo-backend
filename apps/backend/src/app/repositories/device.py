@@ -140,6 +140,11 @@ class DeviceRepository:
         await self._session.flush()
         return DeviceRegistered(device=new_device)
 
+    async def get_by_device_id(self, device_id: str) -> Device | None:
+        """Return the device row for `device_id` regardless of status, or `None`."""
+        result = await self._session.execute(select(Device).where(Device.device_id == device_id))
+        return result.scalar_one_or_none()
+
     async def get_latest_active_device(self, user_id: str) -> Device | None:
         """Return the most-recently-seen active device for `user_id`, or `None`.
 

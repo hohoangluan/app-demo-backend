@@ -4,9 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.youreyes.app.data.AppDatabaseHelper
-import com.youreyes.app.dispatcher.CommandDispatcher
 import com.youreyes.app.network.DeviceApiClient
+import com.youreyes.app.service.CommandExecutionService
 import java.util.concurrent.Executors
 
 // FCM Push Receiver - entry point for commands pushed from the backend.
@@ -47,26 +46,28 @@ class FcmPushReceiver : FirebaseMessagingService() {
         val deviceId    = data["device_id"]     ?: return logMissing("device_id")
         val action      = data["action"]        ?: return logMissing("action")
         val paramsJson  = data["params_json"]   ?: "{}"
-        val baseUrl     = data["base_url"]
-        val bearerToken = data["bearer_token"]
 
-        val ctx: Context = applicationContext
-        executor.execute {
-            val dispatcher = CommandDispatcher(
-                dbHelper = AppDatabaseHelper(ctx),
-                context  = ctx,
-            )
-            val result = dispatcher.processPushCommand(
-                requestId   = requestId,
-                userId      = userId,
-                deviceId    = deviceId,
-                action      = action,
-                paramsJson  = paramsJson,
-                baseUrl     = baseUrl,
-                bearerToken = bearerToken,
-            )
-            Log.i(TAG, "Dispatch result for request: $result")
-        }
+        // Push commands never carry credentials (architeture.md 13.4): the device
+        // resolves its own base_url/bearer_token from local config saved at register().
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val baseUrl     = data["base_url"] ?: prefs.getString(KEY_BASE_URL, null)
+        val bearerToken = data["bearer_token"] ?: prefs.getString(KEY_BEARER_TOKEN, null)
+
+        // Handed to a foreground service rather than run on this receiver's own
+        // executor: handlers now wait for the handset to confirm the action
+        // (audio actually playing, dialler actually off-hook), which outlives
+        // the short grace period this process keeps after onMessageReceived
+        // returns — lowmemorykiller was seen killing it mid-command.
+        CommandExecutionService.start(
+            context     = applicationContext,
+            requestId   = requestId,
+            userId      = userId,
+            deviceId    = deviceId,
+            action      = action,
+            paramsJson  = paramsJson,
+            baseUrl     = baseUrl,
+            bearerToken = bearerToken,
+        )
     }
 
     private fun logMissing(field: String) {
@@ -80,6 +81,7 @@ class FcmPushReceiver : FirebaseMessagingService() {
         const val KEY_DEVICE_ID    = "device_id"
         const val KEY_BASE_URL     = "base_url"
         const val KEY_BEARER_TOKEN = "bearer_token"
+        const val KEY_EMERGENCY_CONTACT = "emergency_contact"
         private const val TAG      = "FcmPushReceiver"
     }
 }

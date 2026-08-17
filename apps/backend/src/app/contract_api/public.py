@@ -10,6 +10,7 @@ from app.schemas.common import AcceptedResponse, ErrorResponse, OkResponse, Requ
 from app.schemas.service_requests import (
     ContactCallRequest,
     EmergencyCallRequest,
+    LocationGetRequest,
     MusicPlayRequest,
     MusicStopRequest,
     MusicVolumeRequest,
@@ -144,6 +145,17 @@ async def emergency_call(_request: EmergencyCallRequest) -> Never:
 )
 async def contact_call(_request: ContactCallRequest) -> Never:
     """Describe the contact call endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/service/location/get",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=PUBLIC_VALIDATION_RESPONSE,
+)
+async def location_get(_request: LocationGetRequest) -> Never:
+    """Describe the device location lookup endpoint contract."""
     _contract_only()
 
 

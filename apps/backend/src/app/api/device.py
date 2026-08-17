@@ -17,7 +17,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
-from app.auth import require_device_bearer_token
+from app.auth import UserPrincipal, require_device_bearer_token, require_user_session
 from app.config import Settings, get_app_settings
 from app.database import get_db_session
 from app.errors import RequestIdConflictError, RequestNotFoundError
@@ -35,6 +35,7 @@ from app.repositories.operation import (
     ReportExecutionState,
     ReportOutcomeStatus,
 )
+from app.schemas.auth import DeviceLinkData, DeviceLinkRequest
 from app.schemas.common import OkResponse
 from app.schemas.device import (
     DeviceRegisterData,
@@ -43,6 +44,7 @@ from app.schemas.device import (
     DeviceReportRequest,
     ExecutionState,
 )
+from app.services.auth import confirm_device_link
 
 router = APIRouter(prefix="/api/v1/device", tags=["device"])
 
@@ -165,3 +167,25 @@ async def report_device_action(
         await session.commit()
 
     return OkResponse(data=DeviceReportData(request_id=body.request_id, report_received=True))
+
+
+@router.post("/link", response_model=OkResponse[DeviceLinkData])
+async def link_device(
+    body: DeviceLinkRequest,
+    principal: Annotated[UserPrincipal, Depends(require_user_session)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> OkResponse[DeviceLinkData]:
+    """Confirm an already-registered active device belongs to the logged-in caller.
+
+    Gated by the phone app's own end-user session (`require_user_session`),
+    not the Device Bearer token above -- this is the phone app confirming a
+    pairing, not the Android device reporting its own state. Read-only: it
+    never creates or mutates a `devices` row, so there is nothing to commit.
+    """
+    repo = DeviceRepository(session)
+    device = await confirm_device_link(
+        repo, public_user_id=principal.public_user_id, device_id=body.device_id
+    )
+    return OkResponse(
+        data=DeviceLinkData(device_id=device.device_id, platform=device.platform.value)
+    )

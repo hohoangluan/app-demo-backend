@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError
 from app.schemas.service_requests import (
     ContactCallRequest,
     EmergencyCallRequest,
+    LocationGetRequest,
     MusicPlayRequest,
     MusicStopRequest,
     MusicVolumeRequest,
@@ -18,7 +19,7 @@ from app.schemas.service_requests import (
 )
 
 BASE_REQUEST: dict[str, Any] = {
-    "user_id": "user-123",
+    "device_id": "glasses-123",
     "request_id": "550e8400-e29b-41d4-a716-446655440000",
 }
 
@@ -46,6 +47,7 @@ REQUEST_EXAMPLES: tuple[tuple[type[BaseModel], dict[str, Any]], ...] = (
     (NavigationStopRequest, BASE_REQUEST | {"navigation_id": "nav-123"}),
     (EmergencyCallRequest, BASE_REQUEST),
     (ContactCallRequest, BASE_REQUEST | {"name": "Nguyễn Văn A"}),
+    (LocationGetRequest, BASE_REQUEST),
 )
 
 
@@ -232,17 +234,17 @@ def test_client_supplied_field_trims_whitespace(
     assert getattr(request, field) == f"{field}-value"
 
 
-def test_service_request_user_id_trims_whitespace() -> None:
-    """Store the trimmed user_id shared by every Public function request."""
-    request = MusicStopRequest.model_validate(BASE_REQUEST | {"user_id": "  user-123  "})
+def test_service_request_device_id_trims_whitespace() -> None:
+    """Store the trimmed device_id shared by every Public function request."""
+    request = MusicStopRequest.model_validate(BASE_REQUEST | {"device_id": "  glasses-123  "})
 
-    assert request.user_id == "user-123"
+    assert request.device_id == "glasses-123"
 
 
-def test_service_request_rejects_whitespace_only_user_id() -> None:
-    """Reject a whitespace-only user_id shared by every Public function request."""
+def test_service_request_rejects_whitespace_only_device_id() -> None:
+    """Reject a whitespace-only device_id shared by every Public function request."""
     with pytest.raises(ValidationError):
-        MusicStopRequest.model_validate(BASE_REQUEST | {"user_id": "   "})
+        MusicStopRequest.model_validate(BASE_REQUEST | {"device_id": "   "})
 
 
 @pytest.mark.parametrize(

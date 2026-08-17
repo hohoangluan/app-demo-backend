@@ -5,6 +5,10 @@
     <!-- emergency_call, contact_call: dial/call phone number -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- emergency_call: send location SMS to the configured emergency contact -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- CALL_PHONE/SEND_SMS otherwise imply required telephony hardware (blocks ChromeOS/tablet installs) -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <!-- ── Audio ────────────────────────────────────────────────────── -->
     <!-- music_volume: adjust media stream volume -->
@@ -19,6 +23,9 @@
     <!-- navigation_start: pass current location to Google Maps -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- emergency_call runs from a background FCM push, not the foreground app;
+         without this, LocationManager silently returns no last-known fix there -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- ── Overlay / Display ────────────────────────────────────────── -->
     <!-- display_show: render overlay notifications on top of other apps -->
@@ -28,11 +35,36 @@
     <!-- DeviceApiClient: HTTP calls to backend /register and /report -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- CommandExecutionService runs one pushed command to completion; Android 14+
+         requires the type-specific permission alongside the generic one -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Keeps high-priority FCM data messages from being delayed by Doze while screen is off -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Lets CommandLaunchActivity present itself over the lock screen from a background push -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!--
+        Android 11+ package visibility: without these, PackageManager.resolveActivity()
+        for Maps/YouTube Music/Grab returns null even when the app is installed, so
+        music_play, navigation_start and ride_quote/confirm would silently fall back
+        instead of opening the real app.
+    -->
+    <queries>
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.google.android.apps.youtube.music" />
+        <package android:name="com.grabtaxi.passenger" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppDemo">
@@ -47,6 +79,19 @@
         </activity>
 
         <!--
+            Transient trampoline shown by the full-screen-intent notification so a
+            background command can open its real target screen even over a locked
+            screen. No UI of its own — see NotificationLauncher.kt.
+        -->
+        <activity
+            android:name=".launch.CommandLaunchActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!--
             FCM Receiver — receives push commands from backend via Firebase.
         -->
         <service
@@ -54,6 +99,31 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!--
+            Executes one pushed command. Handlers wait for the handset to confirm
+            the action really happened, so execution outlives the FCM receiver's
+            own grace period — see CommandExecutionService.kt.
+        -->
+        <service
+            android:name=".service.CommandExecutionService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
+
+        <!--
+            Empty listener whose only job is to make this app eligible for
+            MediaSessionManager.getActiveSessions(), which is what lets
+            music_play press play on YouTube Music's own session. The user has
+            to enable it under Settings > Notifications.
+        -->
+        <service
+            android:name=".service.MediaControlListenerService"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
 

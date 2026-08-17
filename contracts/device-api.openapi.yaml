@@ -43,6 +43,46 @@ paths:
                 $ref: '#/components/schemas/OkResponse_DeviceReportData_'
       security:
       - DeviceBearerAuth: []
+  /api/v1/device/glasses/link:
+    post:
+      summary: Link Glasses Device
+      description: Describe the glasses pairing endpoint contract.
+      operationId: link_glasses_device_api_v1_device_glasses_link_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlassesLinkRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_GlassesLinkData_'
+      security:
+      - DeviceBearerAuth: []
+  /api/v1/device/glasses/unlink:
+    post:
+      summary: Unlink Glasses Device
+      description: Describe the glasses unpairing endpoint contract.
+      operationId: unlink_glasses_device_api_v1_device_glasses_unlink_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlassesUnlinkRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_GlassesUnlinkData_'
+      security:
+      - DeviceBearerAuth: []
 components:
   schemas:
     Action:
@@ -186,6 +226,59 @@ components:
       - failed
       title: ExecutionState
       description: Terminal execution states reported by Android.
+    GlassesLinkData:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        linked:
+          type: boolean
+          const: true
+          title: Linked
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      title: GlassesLinkData
+      description: Result of a successful glasses pairing.
+    GlassesLinkRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        device_id:
+          type: string
+          title: Device Id
+      additionalProperties: false
+      type: object
+      required:
+      - user_id
+      - device_id
+      title: GlassesLinkRequest
+      description: Pair a glasses device_id to the given app user_id.
+    GlassesUnlinkData:
+      properties:
+        unlinked:
+          type: boolean
+          title: Unlinked
+      additionalProperties: false
+      type: object
+      required:
+      - unlinked
+      title: GlassesUnlinkData
+      description: 'Result of an unlink attempt: whether an active pairing was cleared.'
+    GlassesUnlinkRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+      additionalProperties: false
+      type: object
+      required:
+      - user_id
+      title: GlassesUnlinkRequest
+      description: Unpair whichever glasses device_id is currently active for user_id.
     JsonValue: {}
     OkResponse_DeviceRegisterData_:
       properties:
@@ -215,6 +308,34 @@ components:
       required:
       - data
       title: OkResponse[DeviceReportData]
+    OkResponse_GlassesLinkData_:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/GlassesLinkData'
+      additionalProperties: false
+      type: object
+      required:
+      - data
+      title: OkResponse[GlassesLinkData]
+    OkResponse_GlassesUnlinkData_:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/GlassesUnlinkData'
+      additionalProperties: false
+      type: object
+      required:
+      - data
+      title: OkResponse[GlassesUnlinkData]
   securitySchemes:
     DeviceBearerAuth:
       type: http

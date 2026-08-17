@@ -147,6 +147,17 @@ class ContactCallResult(BaseModel):
     phone_number: str
 
 
+class LocationGetResult(BaseModel):
+    """Final result of a device location lookup."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    lat: Latitude
+    lng: Longitude
+    address: str | None
+    captured_at: AwareUtcDatetime
+
+
 type ActionResult = (
     RideQuoteResult
     | RideConfirmResult
@@ -157,4 +168,5 @@ type ActionResult = (
     | NavigationStopResult
     | EmergencyCallResult
     | ContactCallResult
+    | LocationGetResult
 )

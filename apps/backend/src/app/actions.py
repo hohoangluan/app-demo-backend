@@ -24,6 +24,7 @@ class Operation(StrEnum):
     NAVIGATION_STOP = "navigation_stop"
     EMERGENCY_CALL = "emergency_call"
     CONTACT_CALL = "contact_call"
+    LOCATION_GET = "location_get"
 
 
 class Action(StrEnum):
@@ -38,6 +39,7 @@ class Action(StrEnum):
     NAVIGATION_STOP = "navigation_stop"
     EMERGENCY_CALL = "emergency_call"
     CONTACT_CALL = "contact_call"
+    LOCATION_GET = "location_get"
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +116,13 @@ ACTION_ROUTES: Final = (
         Operation.CONTACT_CALL,
         Action.CONTACT_CALL,
         60,
+    ),
+    ActionRoute(
+        HttpMethod.POST,
+        "/api/v1/service/location/get",
+        Operation.LOCATION_GET,
+        Action.LOCATION_GET,
+        30,
     ),
 )
 

@@ -10,11 +10,18 @@ from app.schemas.common import Latitude, Longitude, TrimmedNonEmptyStr
 
 
 class ServiceRequest(BaseModel):
-    """Fields shared by every Public function request."""
+    """Fields shared by every Public function request.
+
+    ``device_id`` identifies the glasses device the External API Client
+    (e.g. a "kính" server) is acting on behalf of, not the Android app's own
+    installation id (see ``app/models/glasses_device.py``). The Public
+    Service API resolves it to an internal ``user_id`` via
+    ``GlassesDeviceRepository`` before accepting the operation.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    user_id: TrimmedNonEmptyStr
+    device_id: TrimmedNonEmptyStr
     request_id: UUID
 
 
@@ -123,6 +130,10 @@ class ContactCallRequest(ServiceRequest):
 
     name: TrimmedNonEmptyStr
     contact_id: str | None = None
+
+
+class LocationGetRequest(ServiceRequest):
+    """Request the device's current location."""
 
 
 class QuotesSpeakRequest(ServiceRequest):

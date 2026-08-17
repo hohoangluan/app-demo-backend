@@ -40,10 +40,17 @@ from __future__ import annotations
 import hashlib
 import hmac
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated
+from uuid import UUID  # noqa: TC003
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
+
+from app.database import get_db_session
+from app.repositories.session import SessionRepository
+from app.security import hash_token
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -226,3 +233,45 @@ async def require_device_bearer_token(
     authenticator = _get_device_api_authenticator(request)
     if not authenticator.authenticate(credentials.credentials):
         raise _unauthorized()
+
+
+@dataclass(frozen=True, slots=True)
+class UserPrincipal:
+    """Authenticated end-user identity resolved from a demo-auth session token.
+
+    Unlike :class:`ClientPrincipal`/Device auth (a single shared secret
+    compared in constant time), an end-user session token is per-login and
+    dynamic, so it cannot be verified against pre-decoded config: it is
+    looked up by hash in the ``sessions`` table instead.
+    """
+
+    user_id: UUID
+    public_user_id: str
+    phone_number: str
+    display_name: str | None
+
+
+async def require_user_session(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> UserPrincipal:
+    """FastAPI dependency: verify a demo-auth end-user session Bearer token.
+
+    Mirrors :func:`require_public_client_principal`'s 401 handling exactly
+    (same shared :func:`_unauthorized` response for every failure branch),
+    but resolves the credential against the ``sessions`` table rather than a
+    static configured digest.
+    """
+    if credentials is None:
+        raise _unauthorized()
+    token_hash = hash_token(credentials.credentials)
+    repo = SessionRepository(session)
+    authenticated = await repo.get_valid_by_token_hash(token_hash, now=datetime.now(UTC))
+    if authenticated is None:
+        raise _unauthorized()
+    return UserPrincipal(
+        user_id=authenticated.user.id,
+        public_user_id=authenticated.user.public_user_id,
+        phone_number=authenticated.user.phone_number,
+        display_name=authenticated.user.display_name,
+    )

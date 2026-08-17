@@ -35,10 +35,12 @@ async def test_accept_new_request_inserts_and_computes_expiry(
 ) -> None:
     """A brand-new request is accepted, persisted, and expires after the route's timeout."""
     service = OperationService(db_session, settings)
-    request = MusicVolumeRequest(user_id="user-1", request_id=uuid4(), level=70)
+    request = MusicVolumeRequest(device_id="glasses-1", request_id=uuid4(), level=70)
     before = datetime.now(UTC)
 
-    result = await service.accept(client_id="client-1", route=MUSIC_VOLUME_ROUTE, request=request)
+    result = await service.accept(
+        client_id="client-1", user_id="user-1", route=MUSIC_VOLUME_ROUTE, request=request
+    )
     await db_session.commit()
 
     assert result.status is AcceptOperationStatus.ACCEPTED
@@ -61,18 +63,18 @@ async def test_accept_duplicate_request_reuses_original_created_at(
     service = OperationService(db_session, settings)
     request_id = uuid4()
     request = MusicVolumeRequest(
-        user_id="user-1", request_id=request_id, direction=VolumeDirection.UP
+        device_id="glasses-1", request_id=request_id, direction=VolumeDirection.UP
     )
 
     first_result = await service.accept(
-        client_id="client-1", route=MUSIC_VOLUME_ROUTE, request=request
+        client_id="client-1", user_id="user-1", route=MUSIC_VOLUME_ROUTE, request=request
     )
     await db_session.commit()
     original_created_at = first_result.operation.created_at
     assert first_result.inserted is True
 
     second_result = await service.accept(
-        client_id="client-1", route=MUSIC_VOLUME_ROUTE, request=request
+        client_id="client-1", user_id="user-1", route=MUSIC_VOLUME_ROUTE, request=request
     )
     await db_session.commit()
 
@@ -88,17 +90,17 @@ async def test_accept_conflicting_payload_returns_conflict(
     """The same request ID with a different payload is a fingerprint conflict, not a reuse."""
     service = OperationService(db_session, settings)
     request_id = uuid4()
-    first_request = MusicVolumeRequest(user_id="user-1", request_id=request_id, level=50)
-    second_request = MusicVolumeRequest(user_id="user-1", request_id=request_id, level=90)
+    first_request = MusicVolumeRequest(device_id="glasses-1", request_id=request_id, level=50)
+    second_request = MusicVolumeRequest(device_id="glasses-1", request_id=request_id, level=90)
 
     first_result = await service.accept(
-        client_id="client-1", route=MUSIC_VOLUME_ROUTE, request=first_request
+        client_id="client-1", user_id="user-1", route=MUSIC_VOLUME_ROUTE, request=first_request
     )
     await db_session.commit()
     assert first_result.status is AcceptOperationStatus.ACCEPTED
 
     second_result = await service.accept(
-        client_id="client-1", route=MUSIC_VOLUME_ROUTE, request=second_request
+        client_id="client-1", user_id="user-1", route=MUSIC_VOLUME_ROUTE, request=second_request
     )
     await db_session.commit()
 

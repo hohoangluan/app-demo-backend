@@ -98,6 +98,69 @@ class RequestIdConflictError(PublicApiError):
     code = "REQUEST_ID_CONFLICT"
 
 
+class PhoneAlreadyRegisteredError(PublicApiError):
+    """Raised when registering a phone number that already completed OTP verification."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "PHONE_ALREADY_REGISTERED"
+
+
+class InvalidCredentialsError(PublicApiError):
+    """Raised when login phone number/password do not match a verified account."""
+
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "INVALID_CREDENTIALS"
+
+
+class PhoneNotVerifiedError(PublicApiError):
+    """Raised when logging in to an account that never completed OTP verification."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "PHONE_NOT_VERIFIED"
+
+
+class OtpInvalidError(PublicApiError):
+    """Raised when a submitted OTP code does not match the stored hash."""
+
+    status_code = status.HTTP_400_BAD_REQUEST
+    code = "OTP_INVALID"
+
+
+class OtpExpiredError(PublicApiError):
+    """Raised when a submitted OTP code has expired or has no pending OTP."""
+
+    status_code = status.HTTP_400_BAD_REQUEST
+    code = "OTP_EXPIRED"
+
+
+class DeviceNotFoundError(PublicApiError):
+    """Raised when confirming a device link for a ``device_id`` with no active registration."""
+
+    status_code = status.HTTP_404_NOT_FOUND
+    code = "DEVICE_NOT_FOUND"
+
+
+class DeviceOwnerConflictError(PublicApiError):
+    """Raised when confirming a device link for a ``device_id`` owned by another user."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "DEVICE_OWNER_CONFLICT"
+
+
+class GlassesDeviceOwnerConflictError(PublicApiError):
+    """Raised when linking a glasses ``device_id`` that is actively paired to another user."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "GLASSES_DEVICE_OWNER_CONFLICT"
+
+
+class GlassesDeviceNotLinkedError(PublicApiError):
+    """Raised when a Public Service API ``device_id`` has no active glasses pairing."""
+
+    status_code = status.HTTP_404_NOT_FOUND
+    code = "GLASSES_DEVICE_NOT_LINKED"
+
+
 def _error_response(
     *, status_code: int, code: str, message: str, details: dict[str, Any]
 ) -> JSONResponse:

@@ -19,6 +19,13 @@ class DeviceStatus(StrEnum):
     REVOKED = "revoked"
 
 
+class GlassesLinkStatus(StrEnum):
+    """Glasses-to-user pairing states."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
 class RequestState(StrEnum):
     """Public operation states persisted in PostgreSQL."""
 
@@ -67,6 +74,7 @@ __all__ = [
     "DeliveryState",
     "DevicePlatform",
     "DeviceStatus",
+    "GlassesLinkStatus",
     "Operation",
     "RequestState",
 ]

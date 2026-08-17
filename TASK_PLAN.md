@@ -204,22 +204,36 @@ Ghi chÃ­nh xÃ¡c lá»‡nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng Ä‘�
 - User yÃªu cáº§u: tá»« task tiáº¿p theo chá» test happy-path/luá»ng chÃ­nh, bá» test edge-case/race/constraint Äáº§y Äá»§ Äá» hoÃ n thÃ nh nhanh hÆ¡n â ÄÃ£ Äiá»u chá»nh scope cho `P1-DB-09`/`10` trá» Äi theo ÄÃºng yÃªu cáº§u nÃ y (coverage tháº¥p hÆ¡n cÃ¡c task trÆ°á»c).
 - Dispatch 1 subagent gá»p cáº£ `P1-DB-09` (callback claim/lease) vÃ  `P1-DB-10` (report/timeout transitions) Äá» nhanh hÆ¡n thay vÃ¬ 2 lÆ°á»£t. HoÃ n thÃ nh, 5 test happy-path pass. Main session verify láº¡i (ruff/mypy, PostgreSQL tháº­t 217 test pass, offline suite/build/openapi-check) â pass háº¿t, commit.
 - Dispatch 1 subagent gá»p Bearer auth + Operation service (Äá»¥ng chung `config.py`/`conftest.py` nÃªn khÃ´ng tÃ¡ch song song). HoÃ n thÃ nh: `app/auth.py`, `app/services/operation.py`, má» rá»ng `Settings` (`public_api_client_id`, `public_api_scopes`), cáº­p nháº­t `.env.example`/`infra/compose.yaml`. Main session verify láº¡i Äáº§y Äá»§ (Äá»c code, ruff/mypy, PostgreSQL tháº­t 231 test pass, offline/build/openapi/compose-config) â pass háº¿t, khÃ´ng phÃ¡t hiá»n secret rÃ² rá» trong `.env.example`, commit.
+  1. `P1-DB-05` PostgreSQL test harness.
+  2. Ã p dá»¥ng `D-07` validation policy vÃ o toÃ n bá»™ Public/Internal Pydantic schema.
+- Main session verify láº¡i: ruff/mypy, pytest (168 passed/2 skipped), PostgreSQL tháº­t (170 passed), `export_openapi.py --check`, `uv build`.
+- Dispatch tiáº¿p subagent: `P1-DB-06` (Device repository), `P1-DB-07` (Operation insert/read + idempotency, PG-06â€“12/24). Main session verify láº¡i: 199 test pass, test concurrency ok.
+- Commit `P1-DB-06`/`P1-DB-07`. Dispatch `P1-DB-08` (delivery claim/lease). HoÃ n thÃ nh, verify (212 test pass), commit.
+- Dispatch 1 subagent gá»™p `P1-DB-09`/`P1-DB-10` (callback claim/lease, report/timeout transitions). Main session verify (217 test pass), commit.
+- Dispatch 1 subagent gá»™p Bearer auth + Operation service. Main session verify (231 test pass), commit.
 
-### 2026-08-02 â Session 3
+### 2026-08-02 â€” Session 3
 
-- Báº¯t Äáº§u hoÃ n táº¥t pháº§n cÃ²n láº¡i cá»§a Phase 1: Structured logging & redaction, Public Status API, vÃ  vertical slice Äáº§u tiÃªn `music_volume`.
-- CÃ i Äáº·t `StructuredJsonFormatter`, `redact_sensitive_data`, `RequestCorrelationMiddleware` (`app/logging.py`, `tests/test_logging.py`).
-- CÃ i Äáº·t Status API `GET /api/v1/requests/{request_id}` (`app/api/status.py`, `tests/api/test_status_api.py`) há» trá»£ D-06 404 security response vÃ  Bearer scope `requests:read`.
-- CÃ i Äáº·t vertical slice `POST /api/v1/service/music/volume` (`app/api/service.py`, `tests/api/test_music_volume_api.py`, `tests/integration/test_music_volume_postgres.py`) vá»i canonical request fingerprinting, idempotency D-10 reuse original `accepted_at`, vÃ  DB persistence.
+- Báº¯t Ä‘áº¡u hoÃ n táº¥t pháº§n cÃ²n láº¡i cá»§a Phase 1: Structured logging & redaction, Public Status API, vÃ  vertical slice Ä‘áº§u tiÃªn `music_volume`.
+- CÃ i Ä‘áº·t `StructuredJsonFormatter`, `redact_sensitive_data`, `RequestCorrelationMiddleware` (`app/logging.py`, `tests/test_logging.py`).
+- CÃ i Ä‘áº·t Status API `GET /api/v1/requests/{request_id}` (`app/api/status.py`, `tests/api/test_status_api.py`) há»— trá»£ D-06 404 security response vÃ  Bearer scope `requests:read`.
+- CÃ i Ä‘áº·t vertical slice `POST /api/v1/service/music/volume` (`app/api/service.py`, `tests/api/test_music_volume_api.py`, `tests/integration/test_music_volume_postgres.py`) vá»›i canonical request fingerprinting, idempotency D-10 reuse original `accepted_at`, vÃ  DB persistence.
 - Wire routers, middleware vÃ  global exception handlers trong application factory (`app/application.py`).
-- Cháº¡y toÃ n bá» quality gates: `ruff format/check` (0 issues), `mypy` strict (0 issues trÃªn 58 source files), `pytest` (244/244 passed trÃªn container PostgreSQL `infra/compose.test.yaml` port 57432), `export_openapi.py --check` (passed), `uv build` (passed), `docker compose config` (passed).
-- HoÃ n táº¥t Phase 1 hoÃ n toÃ n vÃ  sáºµn sÃ ng chuyá»n sang Phase 2 (P2 â Worker pipeline).
+- Cháº¡y toÃ n bá»™ quality gates: `ruff format/check` (0 issues), `mypy` strict (0 issues trÃªn 58 source files), `pytest` (244/244 passed trÃªn container PostgreSQL `infra/compose.test.yaml` port 57432), `export_openapi.py --check` (passed), `uv build` (passed), `docker compose config` (passed).
+- Hoàn tất Phase 1 hoàn toàn và sẵn sàng chuyển sang Phase 2 (P2 — Worker pipeline).
+
+### 2026-08-03 — Session 4
+
+- Đã khởi chạy PostgreSQL container và áp dụng Alembic migrations.
+- Khai báo và seed thiết bị demo `device-100` liên kết tới `user-100` trong bảng `glasses_devices`.
+- Khởi chạy Backend FastAPI Uvicorn Server thành công tại `http://localhost:8001` (`http://127.0.0.1:8001`).
+- Đã kiểm thử API Client (`test_real/run_real_e2e.py` với `music_volume`): request trả `202 Accepted`, worker dispatch và report hoàn tất, trạng thái trả về `succeeded` với kết quả `PASS`. Server hiện đang hoạt động liên tục tại port `8001`.
 
 
-## Protocol tiáº¿p tá»¥c á» session má»i
+## Protocol tiếp tục ở session mới
 
-1. Äá»c `claude.md`, pháº§n "Tráº¡ng thÃ¡i hiá»n táº¡i" cá»§a file nÃ y vÃ  nháº­t kÃ½ session má»i nháº¥t.
-2. Cháº¡y kiá»m tra read-only tráº¡ng thÃ¡i filesystem/Git vÃ  toolchain; khÃ´ng giáº£ Äá»nh káº¿t quáº£ session trÆ°á»c cÃ²n ÄÃºng.
-3. Chá»n checklist item chÆ°a hoÃ n táº¥t Äáº§u tiÃªn trong phase hiá»n táº¡i.
-4. Viáº¿t/cáº­p nháº­t test cÃ¹ng code, cháº¡y quality gate Ã¡p dá»¥ng ÄÆ°á»£c.
-5. Cáº­p nháº­t checklist, báº£ng evidence, blocker vÃ  nháº­t kÃ½ trÆ°á»c khi káº¿t thÃºc session.
+1. Ä á» c `claude.md`, pháº§n "Tráº¡ng thÃ¡i hiá»‡n táº¡i" cá»§a file nÃ y vÃ  nháº­t kÃ½ session má»›i nháº¥t.
+2. Cháº¡y kiá»ƒm tra read-only tráº¡ng thÃ¡i filesystem/Git vÃ  toolchain; khÃ´ng giáº£ Ä‘á»‹nh káº¿t quáº£ session trÆ°á»›c cÃ²n Ä‘Ãºng.
+3. Chá» n checklist item chÆ°a hoÃ n táº¥t Ä‘áº§u tiÃªn trong phase hiá»‡n táº¡i.
+4. Viáº¿t/cáº­p nháº­t test cÃ¹ng code, cháº¡y quality gate Ã¡p dá»¥ng Ä‘Æ°á»£c.
+5. Cáº­p nháº­t checklist, báº£ng evidence, blocker vÃ  nháº­t kÃ½ trÆ°á»›c khi káº¿t thÃºc session.

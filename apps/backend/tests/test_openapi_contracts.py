@@ -19,9 +19,15 @@ PUBLIC_PATHS = {
     "/api/v1/service/navigation/stop",
     "/api/v1/service/emergency/call",
     "/api/v1/service/contact/call",
+    "/api/v1/service/location/get",
     "/api/v1/requests/{request_id}",
 }
-DEVICE_PATHS = {"/api/v1/device/register", "/api/v1/device/report"}
+DEVICE_PATHS = {
+    "/api/v1/device/register",
+    "/api/v1/device/report",
+    "/api/v1/device/glasses/link",
+    "/api/v1/device/glasses/unlink",
+}
 
 
 def operations(schema: dict[str, Any]) -> list[dict[str, Any]]:
@@ -55,8 +61,18 @@ def test_public_and_device_contract_paths_are_separated(test_app: FastAPI) -> No
         "/api/v1/service/navigation/stop",
         "/api/v1/service/emergency/call",
         "/api/v1/service/contact/call",
+        "/api/v1/service/location/get",
         "/api/v1/device/register",
         "/api/v1/device/report",
+        "/api/v1/device/glasses/link",
+        "/api/v1/device/glasses/unlink",
+        "/api/v1/device/link",
+        "/api/v1/auth/register",
+        "/api/v1/auth/otp/verify",
+        "/api/v1/auth/login",
+        "/api/v1/auth/logout",
+        "/api/v1/preferences",
+        "/api/v1/support/tickets",
     }
 
 
@@ -116,7 +132,7 @@ async def test_public_contract_app_returns_400_for_invalid_request() -> None:
         response = await client.post(
             "/api/v1/service/music/volume",
             headers={"Authorization": "Bearer test-token"},
-            json={"user_id": "user-123", "request_id": "not-a-uuid", "level": 101},
+            json={"device_id": "glasses-123", "request_id": "not-a-uuid", "level": 101},
         )
 
     assert response.status_code == 400

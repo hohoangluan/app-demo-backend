@@ -3,10 +3,14 @@
 from fastapi import FastAPI
 
 from app import __version__
+from app.api.auth import router as auth_router
 from app.api.device import router as device_router
+from app.api.glasses import router as glasses_router
 from app.api.health import router as health_router
+from app.api.preferences import router as preferences_router
 from app.api.service import router as service_router
 from app.api.status import router as status_router
+from app.api.support import router as support_router
 from app.config import Settings
 from app.errors import register_exception_handlers
 from app.lifespan import application_lifespan
@@ -36,5 +40,9 @@ def create_app(settings: Settings) -> FastAPI:
     application.include_router(status_router)
     application.include_router(service_router)
     application.include_router(device_router)
+    application.include_router(glasses_router)
+    application.include_router(auth_router)
+    application.include_router(preferences_router)
+    application.include_router(support_router)
 
     return application

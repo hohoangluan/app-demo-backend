@@ -2,6 +2,7 @@ package com.youreyes.app.network
 
 import com.youreyes.app.model.DeviceRegisterPayload
 import com.youreyes.app.model.DeviceReportPayload
+import com.youreyes.app.model.GlassesLinkPayload
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -70,6 +71,7 @@ class DeviceApiClient {
                     val errObj = JSONObject().apply {
                         put("code", payload.error.code)
                         put("message", payload.error.message)
+                        put("details", JSONObject(payload.error.details))
                     }
                     put("error", errObj)
                 }
@@ -87,6 +89,36 @@ class DeviceApiClient {
             }
         }
     }
+    fun linkGlassesDevice(baseUrl: String, bearerToken: String, payload: GlassesLinkPayload): Result<Boolean> {
+        return runCatching {
+            val endpointUrl = "${baseUrl.trimEnd('/')}/api/v1/device/glasses/link"
+            val url = URL(endpointUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Authorization", "Bearer $bearerToken")
+            conn.doOutput = true
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+
+            val jsonBody = JSONObject().apply {
+                put("user_id", payload.userId)
+                put("device_id", payload.deviceId)
+            }
+
+            OutputStreamWriter(conn.outputStream).use { it.write(jsonBody.toString()) }
+
+            val responseCode = conn.responseCode
+            if (responseCode in 200..299) {
+                true
+            } else {
+                val errorStream = conn.errorStream
+                val responseText = errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
+                throw IllegalStateException("Glasses link failed ($responseCode): $responseText")
+            }
+        }
+    }
+
     // Convenience method used by FcmPushReceiver on token refresh
     fun register(
         userId: String,

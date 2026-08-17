@@ -12,6 +12,12 @@ from app.schemas.device import (
     DeviceReportData,
     DeviceReportRequest,
 )
+from app.schemas.glasses import (
+    GlassesLinkData,
+    GlassesLinkRequest,
+    GlassesUnlinkData,
+    GlassesUnlinkRequest,
+)
 
 device_bearer = HTTPBearer(scheme_name="DeviceBearerAuth")
 router = APIRouter(dependencies=[Depends(device_bearer)])
@@ -39,4 +45,24 @@ async def register_device(_request: DeviceRegisterRequest) -> Never:
 )
 async def report_device_result(_request: DeviceReportRequest) -> Never:
     """Describe the Android device report endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/device/glasses/link",
+    response_model=OkResponse[GlassesLinkData],
+    status_code=status.HTTP_200_OK,
+)
+async def link_glasses_device(_request: GlassesLinkRequest) -> Never:
+    """Describe the glasses pairing endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/device/glasses/unlink",
+    response_model=OkResponse[GlassesUnlinkData],
+    status_code=status.HTTP_200_OK,
+)
+async def unlink_glasses_device(_request: GlassesUnlinkRequest) -> Never:
+    """Describe the glasses unpairing endpoint contract."""
     _contract_only()

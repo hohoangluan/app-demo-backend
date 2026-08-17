@@ -64,7 +64,7 @@ async def test_music_volume_missing_auth(auth_setup: tuple[Settings, str]) -> No
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        payload = {"user_id": "user-1", "request_id": str(uuid4()), "level": 50}
+        payload = {"device_id": "glasses-1", "request_id": str(uuid4()), "level": 50}
         response = await client.post("/api/v1/service/music/volume", json=payload)
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -83,7 +83,7 @@ async def test_music_volume_validation_failure_both_direction_and_level(
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         payload = {
-            "user_id": "user-1",
+            "device_id": "glasses-1",
             "request_id": str(uuid4()),
             "direction": "up",
             "level": 50,
@@ -112,7 +112,7 @@ async def test_music_volume_validation_failure_invalid_level(
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         payload = {
-            "user_id": "user-1",
+            "device_id": "glasses-1",
             "request_id": str(uuid4()),
             "level": 150,  # invalid level > 100
         }
@@ -154,18 +154,28 @@ async def test_music_volume_success_202(
     )
 
     async def mock_accept(
-        _self: OperationService, *, client_id: str, route: object, request: ServiceRequest
+        _self: OperationService,
+        *,
+        client_id: str,
+        user_id: str,
+        route: object,
+        request: ServiceRequest,
     ) -> AcceptOperationResult:
-        _ = (client_id, route, request)
+        _ = (client_id, user_id, route, request)
         return AcceptOperationResult(
             status=AcceptOperationStatus.ACCEPTED, operation=mock_op, inserted=True
         )
 
+    async def mock_resolve(_repository: object, *, device_id: str) -> str:
+        _ = device_id
+        return "user-1"
+
     monkeypatch.setattr(OperationService, "accept", mock_accept)
+    monkeypatch.setattr("app.api.service.resolve_glasses_device_owner", mock_resolve)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        payload = {"user_id": "user-1", "request_id": str(req_id), "level": 70}
+        payload = {"device_id": "glasses-1", "request_id": str(req_id), "level": 70}
         response = await client.post(
             "/api/v1/service/music/volume",
             json=payload,
@@ -209,18 +219,28 @@ async def test_music_volume_conflict_409(
     )
 
     async def mock_accept_conflict(
-        _self: OperationService, *, client_id: str, route: object, request: ServiceRequest
+        _self: OperationService,
+        *,
+        client_id: str,
+        user_id: str,
+        route: object,
+        request: ServiceRequest,
     ) -> AcceptOperationResult:
-        _ = (client_id, route, request)
+        _ = (client_id, user_id, route, request)
         return AcceptOperationResult(
             status=AcceptOperationStatus.CONFLICT, operation=existing_op, inserted=False
         )
 
+    async def mock_resolve(_repository: object, *, device_id: str) -> str:
+        _ = device_id
+        return "user-1"
+
     monkeypatch.setattr(OperationService, "accept", mock_accept_conflict)
+    monkeypatch.setattr("app.api.service.resolve_glasses_device_owner", mock_resolve)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        payload = {"user_id": "user-1", "request_id": str(req_id), "level": 70}
+        payload = {"device_id": "glasses-1", "request_id": str(req_id), "level": 70}
         response = await client.post(
             "/api/v1/service/music/volume",
             json=payload,

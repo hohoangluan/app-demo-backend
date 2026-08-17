@@ -4,12 +4,21 @@ import org.json.JSONObject
 import java.security.MessageDigest
 
 enum class ActionType(val value: String) {
+    // Backend Public API contract actions (project_context.md section 6.4-6.10)
+    RIDE_QUOTE("ride_quote"),
+    RIDE_CONFIRM("ride_confirm"),
+    MUSIC_PLAY("music_play"),
+    MUSIC_STOP("music_stop"),
     MUSIC_VOLUME("music_volume"),
+    NAVIGATION_START("navigation_start"),
+    NAVIGATION_STOP("navigation_stop"),
     EMERGENCY_CALL("emergency_call"),
     CONTACT_CALL("contact_call"),
+    LOCATION_GET("location_get"),
+
+    // Additional local-demo-only actions (no backend counterpart yet)
     QUOTES_SPEAK("quotes_speak"),
     MEDIA_PLAY("media_play"),
-    NAVIGATION_START("navigation_start"),
     CAMERA_CAPTURE("camera_capture"),
     DISPLAY_SHOW("display_show"),
     SYSTEM_SETTINGS("system_settings");
@@ -31,10 +40,20 @@ data class DeviceRegisterPayload(
     val pushToken: String
 )
 
+// Pairs a glasses hardware device_id (a separate id space from the Android
+// app's own deviceId above) to this account's userId. See
+// project_context.md section 6.13a / POST /api/v1/device/glasses/link.
+data class GlassesLinkPayload(
+    val userId: String,
+    val deviceId: String
+)
+
 data class ReportErrorPayload(
     val code: String,
     val message: String,
-    val details: Map<String, String> = emptyMap()
+    // JsonValue-compatible (str/num/bool/null/list/map) to allow nested structures
+    // such as MULTIPLE_CONTACTS_FOUND's `details.candidates` array.
+    val details: Map<String, Any> = emptyMap()
 )
 
 data class DeviceReportPayload(

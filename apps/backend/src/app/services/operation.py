@@ -63,7 +63,7 @@ def compute_request_fingerprint(
        ``ck_operations_request_fingerprint``'s
        ``length(request_fingerprint) = 64`` constraint.
 
-    ``request_id`` and ``user_id`` live inside ``body_object`` (they are
+    ``request_id`` and ``device_id`` live inside ``body_object`` (they are
     ``ServiceRequest`` fields) and are therefore part of the fingerprint,
     exactly as the doc requires.
     """
@@ -95,7 +95,7 @@ def _extract_business_params(request: ServiceRequest) -> JsonObject:
     fields removed below.
     """
     body_object = request.model_dump(mode="json", exclude_none=True)
-    body_object.pop("user_id", None)
+    body_object.pop("device_id", None)
     body_object.pop("request_id", None)
     return body_object
 
@@ -158,9 +158,14 @@ class OperationService:
         self._settings = settings
 
     async def accept(
-        self, *, client_id: str, route: ActionRoute, request: ServiceRequest
+        self, *, client_id: str, user_id: str, route: ActionRoute, request: ServiceRequest
     ) -> AcceptOperationResult:
         """Accept-or-reuse ``request`` as one operation, per ``docs/p1-api-plan.md``.
+
+        ``user_id`` is the internal identity already resolved from
+        ``request.device_id`` by the caller (see
+        ``resolve_glasses_device_owner`` in ``app/services/glasses.py``) --
+        this method never reads identity off ``request`` itself.
 
         Builds the ``NewOperation`` candidate (fingerprint, fixed
         mapping/timeout from ``route``, initial ``callback_state``) and
@@ -172,7 +177,7 @@ class OperationService:
         candidate = NewOperation(
             request_id=request.request_id,
             client_id=client_id,
-            user_id=request.user_id,
+            user_id=user_id,
             operation=route.operation,
             action=route.action,
             params=_extract_business_params(request),
