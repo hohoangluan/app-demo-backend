@@ -45,6 +45,7 @@ from app.schemas.device import (
     ExecutionState,
 )
 from app.services.auth import confirm_device_link
+from app.workers.wake import WorkerWakeSignals, get_worker_wake_signals
 
 router = APIRouter(prefix="/api/v1/device", tags=["device"])
 
@@ -112,6 +113,7 @@ async def report_device_action(
     body: DeviceReportRequest,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> OkResponse[DeviceReportData]:
     """Report the execution outcome of an action by an Android device.
 
@@ -165,6 +167,8 @@ async def report_device_action(
 
     if session is not None:
         await session.commit()
+        if settings.callback_url:
+            wake_signals.callback.set()
 
     return OkResponse(data=DeviceReportData(request_id=body.request_id, report_received=True))
 

@@ -42,7 +42,9 @@ async def application_lifespan(app: FastAPI) -> AsyncGenerator[None]:
     runner: WorkerRunner | None = None
     if session_factory is not None:
         try:
-            runner = WorkerRunner(session_factory, settings)
+            runner = WorkerRunner(
+                session_factory, settings, app.state.worker_wake_signals
+            )
             app.state.worker_runner = runner
             runner.start()
             app.state.ready = True

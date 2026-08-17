@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 from enum import StrEnum
 from typing import TYPE_CHECKING, Protocol
 
@@ -111,12 +112,14 @@ def _build_message(*, push_token: str, operation: Operation) -> messaging.Messag
         "action": operation.action.value,
         "params_json": json.dumps(operation.params, separators=(",", ":")),
         "issued_at": operation.created_at.isoformat(),
+        "deadline_at": (operation.created_at + timedelta(seconds=1)).isoformat(),
         "expires_at": operation.expires_at.isoformat(),
+        "requested_priority": "high",
     }
     return messaging.Message(
         data=data,
         token=push_token,
-        android=messaging.AndroidConfig(priority="high"),
+        android=messaging.AndroidConfig(priority="high", ttl=timedelta(seconds=10)),
     )
 
 

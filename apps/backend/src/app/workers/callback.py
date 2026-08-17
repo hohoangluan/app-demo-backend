@@ -37,12 +37,16 @@ class CallbackWorker:
     """Worker polling and sending webhook callbacks for terminal operations."""
 
     def __init__(
-        self, session_factory: async_sessionmaker[AsyncSession], settings: Settings
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+        settings: Settings,
+        wake_event: asyncio.Event | None = None,
     ) -> None:
         """Initialize CallbackWorker with session factory and configuration."""
         self._session_factory = session_factory
         self._settings = settings
         self._adapter = CallbackAdapter(settings)
+        self._wake_event = wake_event or asyncio.Event()
 
     async def run_once(self) -> int:
         """Execute one polling batch of callback claims and HTTP notifications.
@@ -114,7 +118,12 @@ class CallbackWorker:
             try:
                 processed = await self.run_once()
                 if processed == 0:
-                    await asyncio.sleep(poll_interval)
+                    try:
+                        await asyncio.wait_for(self._wake_event.wait(), timeout=poll_interval)
+                    except TimeoutError:
+                        pass
+                    finally:
+                        self._wake_event.clear()
             except asyncio.CancelledError:
                 break
             except Exception:

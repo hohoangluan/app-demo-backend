@@ -97,7 +97,11 @@ class CallbackAdapter:
 
         url_str = str(self._settings.callback_url)
         allowed_hosts = (
-            list(self._settings.callback_allowed_hosts)
+            [
+                host.strip()
+                for host in self._settings.callback_allowed_hosts.split(",")
+                if host.strip()
+            ]
             if self._settings.callback_allowed_hosts
             else []
         )

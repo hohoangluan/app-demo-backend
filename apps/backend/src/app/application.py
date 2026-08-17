@@ -15,6 +15,7 @@ from app.config import Settings
 from app.errors import register_exception_handlers
 from app.lifespan import application_lifespan
 from app.logging import RequestCorrelationMiddleware, setup_logging
+from app.workers.wake import WorkerWakeSignals
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -28,6 +29,7 @@ def create_app(settings: Settings) -> FastAPI:
     )
     application.state.settings = settings
     application.state.ready = False
+    application.state.worker_wake_signals = WorkerWakeSignals()
 
     # Middleware
     application.add_middleware(RequestCorrelationMiddleware)

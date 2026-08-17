@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from app.workers.callback import CallbackWorker
 from app.workers.delivery import DeliveryWorker
 from app.workers.timeout import TimeoutWorker
+from app.workers.wake import WorkerWakeSignals
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -27,11 +28,15 @@ class WorkerRunner:
     """Manager owning the lifecycle of background worker tasks."""
 
     def __init__(
-        self, session_factory: async_sessionmaker[AsyncSession], settings: Settings
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+        settings: Settings,
+        wake_signals: WorkerWakeSignals | None = None,
     ) -> None:
         """Initialize WorkerRunner with session factory and configuration."""
         self._session_factory = session_factory
         self._settings = settings
+        self._wake_signals = wake_signals or WorkerWakeSignals()
         self._shutdown_event = asyncio.Event()
         self._tasks: list[asyncio.Task[None]] = []
         self._started = False
@@ -47,9 +52,13 @@ class WorkerRunner:
             return
 
         self._shutdown_event.clear()
-        delivery_worker = DeliveryWorker(self._session_factory, self._settings)
+        delivery_worker = DeliveryWorker(
+            self._session_factory, self._settings, self._wake_signals.delivery
+        )
         timeout_worker = TimeoutWorker(self._session_factory, self._settings)
-        callback_worker = CallbackWorker(self._session_factory, self._settings)
+        callback_worker = CallbackWorker(
+            self._session_factory, self._settings, self._wake_signals.callback
+        )
 
         self._tasks = [
             asyncio.create_task(

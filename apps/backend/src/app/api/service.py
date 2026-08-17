@@ -29,6 +29,7 @@ from app.schemas.service_requests import (  # noqa: TC001
 )
 from app.services.glasses import resolve_glasses_device_owner
 from app.services.operation import AcceptOperationStatus, OperationService
+from app.workers.wake import WorkerWakeSignals, get_worker_wake_signals
 
 router = APIRouter(prefix="/api/v1/service", tags=["service"])
 
@@ -41,6 +42,7 @@ async def _accept_operation(
     principal: ClientPrincipal,
     session: AsyncSession,
     settings: Settings,
+    wake_signals: WorkerWakeSignals,
 ) -> AcceptedResponse:
     """Accept an operation for a specific action route."""
     route = ACTION_ROUTE_MAP[(HttpMethod.POST, path)]
@@ -57,6 +59,7 @@ async def _accept_operation(
 
     if session is not None:
         await session.commit()
+        wake_signals.delivery.set()
 
     status_url = f"/api/v1/requests/{body.request_id}"
 
@@ -81,10 +84,11 @@ async def post_music_volume(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a music volume change operation."""
     return await _accept_operation(
-        "/api/v1/service/music/volume", body, principal, session, settings
+        "/api/v1/service/music/volume", body, principal, session, settings, wake_signals
     )
 
 
@@ -100,10 +104,11 @@ async def post_emergency_call(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse an emergency call operation."""
     return await _accept_operation(
-        "/api/v1/service/emergency/call", body, principal, session, settings
+        "/api/v1/service/emergency/call", body, principal, session, settings, wake_signals
     )
 
 
@@ -119,10 +124,11 @@ async def post_contact_call(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a contact call operation."""
     return await _accept_operation(
-        "/api/v1/service/contact/call", body, principal, session, settings
+        "/api/v1/service/contact/call", body, principal, session, settings, wake_signals
     )
 
 
@@ -138,9 +144,12 @@ async def post_music_play(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a music play operation."""
-    return await _accept_operation("/api/v1/service/music/play", body, principal, session, settings)
+    return await _accept_operation(
+        "/api/v1/service/music/play", body, principal, session, settings, wake_signals
+    )
 
 
 @router.post(
@@ -155,9 +164,12 @@ async def post_music_stop(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a music stop operation."""
-    return await _accept_operation("/api/v1/service/music/stop", body, principal, session, settings)
+    return await _accept_operation(
+        "/api/v1/service/music/stop", body, principal, session, settings, wake_signals
+    )
 
 
 @router.post(
@@ -172,10 +184,11 @@ async def post_navigation_start(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a navigation start operation."""
     return await _accept_operation(
-        "/api/v1/service/navigation/start", body, principal, session, settings
+        "/api/v1/service/navigation/start", body, principal, session, settings, wake_signals
     )
 
 
@@ -191,10 +204,11 @@ async def post_navigation_stop(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a navigation stop operation."""
     return await _accept_operation(
-        "/api/v1/service/navigation/stop", body, principal, session, settings
+        "/api/v1/service/navigation/stop", body, principal, session, settings, wake_signals
     )
 
 
@@ -210,9 +224,12 @@ async def post_ride_quote(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a ride quote operation."""
-    return await _accept_operation("/api/v1/service/ride/quote", body, principal, session, settings)
+    return await _accept_operation(
+        "/api/v1/service/ride/quote", body, principal, session, settings, wake_signals
+    )
 
 
 @router.post(
@@ -227,10 +244,11 @@ async def post_ride_confirm(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a ride confirm operation."""
     return await _accept_operation(
-        "/api/v1/service/ride/confirm", body, principal, session, settings
+        "/api/v1/service/ride/confirm", body, principal, session, settings, wake_signals
     )
 
 
@@ -246,8 +264,9 @@ async def post_location_get(
     ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a device location lookup operation."""
     return await _accept_operation(
-        "/api/v1/service/location/get", body, principal, session, settings
+        "/api/v1/service/location/get", body, principal, session, settings, wake_signals
     )
