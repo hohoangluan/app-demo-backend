@@ -103,6 +103,41 @@ data class CommandRecord(
     val errorJson: String? = null
 )
 
+// -- Demo phone-app auth (apps/backend/src/app/api/auth.py): register -> OTP verify,
+// or login -- both unauthenticated; only /auth/logout needs the session it issues. --
+
+data class AuthRegisterPayload(
+    val phoneNumber: String,
+    val password: String,
+    val displayName: String? = null,
+)
+
+data class AuthOtpVerifyPayload(
+    val phoneNumber: String,
+    val otpCode: String,
+)
+
+data class AuthLoginPayload(
+    val phoneNumber: String,
+    val password: String,
+)
+
+/** Result of POST /auth/register: the account exists but still needs OTP verification. */
+data class AuthRegisterResult(
+    val userId: String,
+    val publicUserId: String,
+    val phoneNumber: String,
+)
+
+/** An issued session (POST /auth/otp/verify or /auth/login) -- the raw token is returned exactly once. */
+data class AuthSession(
+    val accessToken: String,
+    val userId: String,
+    val publicUserId: String,
+    val phoneNumber: String,
+    val displayName: String?,
+)
+
 data class PendingReportRecord(
     val requestId: String,
     val userId: String,

@@ -38,6 +38,17 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
         userId = prefs.getString(FcmPushReceiver.KEY_USER_ID, "") ?: "",
     )
 
+    /**
+     * Re-reads `user_id` from SharedPreferences. Call when this screen is re-entered —
+     * see [com.youreyes.app.ui.overview.OverviewViewModel.refreshUserId] for why this
+     * ViewModel's own one-time [loadInitialState] can otherwise miss a login that
+     * happened on a different tab.
+     */
+    fun refreshUserId() {
+        val saved = prefs.getString(FcmPushReceiver.KEY_USER_ID, null) ?: return
+        _uiState.update { if (it.userId != saved) it.copy(userId = saved) else it }
+    }
+
     fun onGlassesDeviceIdChange(id: String) = _uiState.update { it.copy(glassesDeviceId = id) }
 
     fun link() {

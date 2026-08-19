@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Edit
@@ -33,6 +34,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,9 +70,14 @@ import com.youreyes.app.ui.theme.YourEyesTeal
 fun ProfileRoute(
     modifier: Modifier = Modifier,
     onNavigateToDevTest: () -> Unit = {},
+    onNavigateToAuth: () -> Unit = {},
 ) {
     val overviewViewModel: OverviewViewModel = viewModel()
     val state by overviewViewModel.uiState.collectAsState()
+    // Picks up a login that happened on the Tài Khoản tab (see
+    // OverviewViewModel.refreshUserId doc) so the user_id shown/used here below
+    // reflects the real logged-in identity without needing an app restart.
+    LaunchedEffect(Unit) { overviewViewModel.refreshUserId() }
 
     ProfileScreen(
         state = state,
@@ -82,6 +89,7 @@ fun ProfileRoute(
         onGenerateNewIds = overviewViewModel::generateNewIds,
         onRegisterClick = overviewViewModel::register,
         onNavigateToDevTest = onNavigateToDevTest,
+        onNavigateToAuth = onNavigateToAuth,
         modifier = modifier,
     )
 }
@@ -97,6 +105,7 @@ fun ProfileScreen(
     onGenerateNewIds: () -> Unit = {},
     onRegisterClick: () -> Unit = {},
     onNavigateToDevTest: () -> Unit = {},
+    onNavigateToAuth: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var selectedFontSize by remember { mutableStateOf("Vừa") }
@@ -159,6 +168,17 @@ fun ProfileScreen(
                 }
             }
         }
+
+        // Real per-user login (apps/backend/src/app/api/auth.py) — separate from the
+        // user_id/device_id demo fields below, but a successful login here replaces
+        // the user_id those fields show/send (see AuthViewModel's class doc).
+        RowCard(
+            title = "Tài Khoản Đăng Nhập",
+            subtitle = "Đăng ký/đăng nhập tài khoản thật bằng số điện thoại — thay cho việc tự gõ user_id bên dưới.",
+            icon = Icons.Default.AccountCircle,
+            iconTone = YourEyesCyan,
+            onClick = onNavigateToAuth,
+        )
 
         // Section: Config Emergency Contact (1 Single Contact)
         SectionLabel(text = "Cấu Hình Số Khẩn Cấp (1 Người Thân)")

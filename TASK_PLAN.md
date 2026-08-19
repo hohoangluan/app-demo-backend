@@ -128,9 +128,38 @@ UI hiện có trong `apps/android`, các màn hình còn thiếu được xếp 
   `MainActivity.AppRoot`. Không đổi `CommunityScreen`/`FeaturesScreen` (không có model
   backend hậu thuẫn "cộng đồng"; `FeaturesScreen`'s `onClick = null` là chủ đích — tính
   năng do kính tự kích hoạt qua giọng nói, không phải bấm từ điện thoại).
-- [ ] Auth thật (đăng ký/OTP/đăng nhập) thay cho form tự gõ `user_id`/token thủ công ở
-  Profile — backend đã có `POST /auth/register`, `/auth/otp/verify`, `/auth/login`,
-  `/auth/logout`.
+- [x] **Auth thật** (đăng ký/OTP/đăng nhập/đăng xuất, `POST /auth/register`,
+  `/auth/otp/verify`, `/auth/login`, `/auth/logout`) + nối identity thật vào
+  Profile/GlassesLink theo quyết định người dùng (phương án B: "Auth + nối luôn
+  identity thật vào Profile/GlassesLink", chọn qua AskUserQuestion sau khi phát hiện
+  mâu thuẫn tài liệu — `docs/superpowers/specs/2026-08-03-glasses-pairing-design.md`
+  §10 đã chấp nhận rủi ro "chưa có login thật" cho `/device/glasses/link`, nhưng
+  `/auth/*` + `/device/link` (session-gated) đã được thêm sau đó mà Android chưa từng
+  gọi tới). **Không đổi** cơ chế xác thực của `/device/register`/`/device/glasses/link`
+  (vẫn Device Bearer token dùng chung, đúng theo đánh đổi đã duyệt) — chỉ đổi *giá trị*
+  `user_id` truyền vào các lệnh gọi đó, lấy từ tài khoản thật thay vì ô tự gõ.
+  - File mới: `ui/auth/AuthUiState.kt` (validate số điện thoại ≥8 chữ số/mật khẩu
+    ≥6 ký tự khớp `app/schemas/auth.py`, unit-testable), `AuthViewModel.kt` (lưu
+    session vào `SharedPreferences` key riêng `auth_*`, đồng thời ghi đè
+    `FcmPushReceiver.KEY_USER_ID` bằng `public_user_id` thật), `AuthScreen.kt`
+    (toggle Đăng nhập/Đăng ký → bước OTP → trạng thái đã đăng nhập + nút Đăng xuất).
+  - `DeviceApiClient.kt`: 4 method mới (`registerAccount`, `verifyOtp`, `login`,
+    `logout`) qua 2 helper private mới (`postJson`/`readBody`), không đụng 3 method
+    cũ (`registerDevice`/`sendReport`/`linkGlassesDevice`).
+  - **Vấn đề "ViewModel đọc SharedPreferences 1 lần lúc khởi tạo, không tự cập nhật
+    khi đổi tab" đã xử lý**: thêm `refreshUserId()` vào `OverviewViewModel` và
+    `GlassesLinkViewModel`, gọi qua `LaunchedEffect(Unit)` mỗi khi `OverviewRoute`/
+    `ProfileRoute`/`GlassesLinkRoute` được vào lại — nếu không có bước này, đăng nhập
+    xong quay lại tab Trang chủ/Hồ sơ/Pairing kính vẫn hiện `user_id` cũ do
+    `AndroidViewModel` được Compose cache theo vòng đời Activity, không phải theo tab.
+  - Test mới `AuthUiStateTest.kt` (7 test: boundary số điện thoại/mật khẩu, số điện
+    thoại có dấu gạch/khoảng trắng vẫn đếm đúng chữ số, OTP rỗng, đang loading,
+    `isLoggedIn`). Không unit-test `AuthViewModel`/`DeviceApiClient` trực tiếp — nhất
+    quán với toàn bộ `AndroidViewModel`/network method khác trong repo (không có
+    Robolectric/MockWebServer, chỉ UiState thuần được test).
+  - Nối navigation: `ProfileScreen` thêm `RowCard` "Tài Khoản Đăng Nhập" đầu trang
+    (trước mục "Cấu Hình Số Khẩn Cấp"), tab mới `selectedTab = 7` trong
+    `MainActivity.AppRoot`.
 - [ ] Nối `GET/PUT /preferences` thật cho khối "Cài Đặt Trợ Năng" ở Profile (hiện chỉ là
   `remember` cục bộ, mất khi tắt app).
 - [ ] Màn hình gửi yêu cầu hỗ trợ (`POST /support/tickets`) — chưa có UI nào.
@@ -155,6 +184,8 @@ cầu gốc của hohoangluan).
 |---|---|---|---|
 | 2026-08-19 | P6 Activity Log (session 6) | PowerShell: `$env:ANDROID_HOME`/`$env:JAVA_HOME` set thủ công (SDK tại `C:\Users\Bong\AppData\Local\Android\Sdk`, JDK Temurin 25), `.\gradlew.bat test --no-daemon` | Pass — `ActivityLogUiStateTest` 9/9 mới pass, toàn bộ `testDebugUnitTest` BUILD SUCCESSFUL, không test cũ nào hỏng |
 | 2026-08-19 | P6 Activity Log (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (73 warning, toàn bộ thuộc các category cosmetic có sẵn từ trước; `ModifierParameter` xuất hiện thêm 2 lần đúng theo pattern `modifier` cuối cùng mà mọi Screen khác trong repo đã dùng); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `AuthUiStateTest` 7/7 mới pass, toàn bộ suite BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 4→5, `Use KTX extension function` 13→15, cùng category cosmetic có sẵn, không category mới); `assembleDebug` BUILD SUCCESSFUL |
 
 Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
 `.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential

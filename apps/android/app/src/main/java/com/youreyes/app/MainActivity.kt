@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.youreyes.app.ui.activitylog.ActivityLogRoute
+import com.youreyes.app.ui.auth.AuthRoute
 import com.youreyes.app.ui.community.CommunityScreen
 import com.youreyes.app.ui.features.FeaturesScreen
 import com.youreyes.app.ui.functiontest.FunctionTestRoute
@@ -323,9 +324,11 @@ private fun AppRoot() {
             4 -> ProfileRoute(
                 modifier = modifier,
                 onNavigateToDevTest = { selectedTab = 5 },
+                onNavigateToAuth = { selectedTab = 7 },
             )
             5 -> FunctionTestRoute(modifier = modifier)
             6 -> ActivityLogRoute(modifier = modifier)
+            7 -> AuthRoute(modifier = modifier)
             else -> GlassesLinkRoute(modifier = modifier)
         }
     }
