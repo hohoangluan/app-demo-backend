@@ -160,8 +160,25 @@ UI hiện có trong `apps/android`, các màn hình còn thiếu được xếp 
   - Nối navigation: `ProfileScreen` thêm `RowCard` "Tài Khoản Đăng Nhập" đầu trang
     (trước mục "Cấu Hình Số Khẩn Cấp"), tab mới `selectedTab = 7` trong
     `MainActivity.AppRoot`.
-- [ ] Nối `GET/PUT /preferences` thật cho khối "Cài Đặt Trợ Năng" ở Profile (hiện chỉ là
-  `remember` cục bộ, mất khi tắt app).
+- [x] **Nối `GET/PUT /preferences` thật** cho khối "Cài Đặt Trợ Năng" ở Profile, thay
+  hoàn toàn `remember { mutableStateOf(...) }` cục bộ trước đó. **Tìm thấy và sửa 1 lỗi
+  contract có sẵn khi wiring**: UI cũ dùng chip "Lớn" cho cỡ chữ, nhưng
+  `app/schemas/preferences.py`'s `FontSizeOption = Literal["Nhỏ","Vừa","To"]` — gửi
+  "Lớn" sẽ bị server từ chối 400. Đã sửa về đúng `"To"`.
+  - File mới: `ui/preferences/PreferencesUiState.kt` (`FONT_SIZE_OPTIONS`/
+    `VOICE_OPTIONS` là nguồn duy nhất cho domain hợp lệ, `canEdit` chỉ true khi đã đăng
+    nhập và không đang loading), `PreferencesViewModel.kt` (load khi có session, mỗi
+    thay đổi field lưu ngay lập tức — 4 field nhỏ, không cần nút Lưu riêng).
+  - `DeviceApiClient.kt`: generalize `postJson` private cũ (viết ở task Auth) thành
+    `requestJson` hỗ trợ GET/PUT, thêm `getPreferences`/`updatePreferences`. 3 method
+    Device Bearer token gốc và 4 method Auth không đổi hành vi.
+  - `ProfileScreen`: bỏ toàn bộ `remember` cục bộ của khối trợ năng, dùng
+    `PreferencesViewModel` qua `viewModel()` (giống pattern `OverviewViewModel`);
+    `ChipButton` private thêm tham số `enabled` (chưa có trước đó) để khoá UI khi chưa
+    đăng nhập; hiện thông báo "Đăng nhập để lưu cài đặt" khi `!isLoggedIn`.
+  - Test mới `PreferencesUiStateTest.kt` (5 test: `canEdit` theo 3 tổ hợp
+    logged-in/loading, đúng danh sách `FONT_SIZE_OPTIONS`/`VOICE_OPTIONS` — có test
+    regression xác nhận không còn "Lớn" sai).
 - [ ] Màn hình gửi yêu cầu hỗ trợ (`POST /support/tickets`) — chưa có UI nào.
 - [ ] Hủy liên kết kính (`POST /device/glasses/unlink`) — `GlassesLinkScreen` mới chỉ có link.
 - [ ] (Thấp ưu tiên) Widget trạng thái nhạc/điều hướng đang chạy trên Overview.
@@ -186,6 +203,8 @@ cầu gốc của hohoangluan).
 | 2026-08-19 | P6 Activity Log (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (73 warning, toàn bộ thuộc các category cosmetic có sẵn từ trước; `ModifierParameter` xuất hiện thêm 2 lần đúng theo pattern `modifier` cuối cùng mà mọi Screen khác trong repo đã dùng); `assembleDebug` BUILD SUCCESSFUL |
 | 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `AuthUiStateTest` 7/7 mới pass, toàn bộ suite BUILD SUCCESSFUL |
 | 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 4→5, `Use KTX extension function` 13→15, cùng category cosmetic có sẵn, không category mới); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `PreferencesUiStateTest` 5/5 mới pass, toàn bộ suite BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint, số lượng warning mỗi category không đổi so với lần chạy trước (không category mới); `assembleDebug` BUILD SUCCESSFUL |
 
 Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
 `.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential

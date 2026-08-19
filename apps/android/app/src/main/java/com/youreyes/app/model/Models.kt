@@ -138,6 +138,20 @@ data class AuthSession(
     val displayName: String?,
 )
 
+/**
+ * Accessibility preferences (apps/backend/src/app/schemas/preferences.py).
+ * `fontSizeOption` must be one of `"Nhỏ" | "Vừa" | "To"`, `voiceOption` one of
+ * `"Giọng Nữ" | "Giọng Nam"` — the server validates these as fixed enums (`extra`
+ * values are a 400, not silently accepted), so the client must send these exact
+ * strings, not e.g. "Lớn" for large.
+ */
+data class PreferencesPayload(
+    val fontSizeOption: String,
+    val voiceOption: String,
+    val highContrast: Boolean,
+    val hapticsEnabled: Boolean,
+)
+
 data class PendingReportRecord(
     val requestId: String,
     val userId: String,

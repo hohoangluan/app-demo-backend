@@ -37,9 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +52,8 @@ import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
 import com.youreyes.app.ui.overview.OverviewUiState
 import com.youreyes.app.ui.overview.OverviewViewModel
+import com.youreyes.app.ui.preferences.PreferencesUiState
+import com.youreyes.app.ui.preferences.PreferencesViewModel
 import com.youreyes.app.ui.theme.YourEyesBorder
 import com.youreyes.app.ui.theme.YourEyesCyan
 import com.youreyes.app.ui.theme.YourEyesDanger
@@ -79,6 +78,12 @@ fun ProfileRoute(
     // reflects the real logged-in identity without needing an app restart.
     LaunchedEffect(Unit) { overviewViewModel.refreshUserId() }
 
+    val preferencesViewModel: PreferencesViewModel = viewModel()
+    val preferencesState by preferencesViewModel.uiState.collectAsState()
+    // Same reason as above: a login that happened after this ViewModel was first
+    // constructed would otherwise leave canEdit stuck false.
+    LaunchedEffect(Unit) { preferencesViewModel.refresh() }
+
     ProfileScreen(
         state = state,
         onServerUrlChange = overviewViewModel::onServerUrlChange,
@@ -90,6 +95,11 @@ fun ProfileRoute(
         onRegisterClick = overviewViewModel::register,
         onNavigateToDevTest = onNavigateToDevTest,
         onNavigateToAuth = onNavigateToAuth,
+        preferencesState = preferencesState,
+        onFontSizeChange = preferencesViewModel::onFontSizeChange,
+        onVoiceChange = preferencesViewModel::onVoiceChange,
+        onHighContrastChange = preferencesViewModel::onHighContrastChange,
+        onHapticsChange = preferencesViewModel::onHapticsChange,
         modifier = modifier,
     )
 }
@@ -106,13 +116,13 @@ fun ProfileScreen(
     onRegisterClick: () -> Unit = {},
     onNavigateToDevTest: () -> Unit = {},
     onNavigateToAuth: () -> Unit = {},
+    preferencesState: PreferencesUiState = PreferencesUiState(),
+    onFontSizeChange: (String) -> Unit = {},
+    onVoiceChange: (String) -> Unit = {},
+    onHighContrastChange: (Boolean) -> Unit = {},
+    onHapticsChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var selectedFontSize by remember { mutableStateOf("Vừa") }
-    var selectedVoice by remember { mutableStateOf("Giọng Nữ") }
-    var highContrast by remember { mutableStateOf(false) }
-    var hapticsEnabled by remember { mutableStateOf(true) }
-
     ScreenShell(modifier = modifier) {
         // User Header Card
         Card(
@@ -207,7 +217,9 @@ fun ProfileScreen(
             }
         }
 
-        // Accessibility Settings
+        // Accessibility Settings — real GET/PUT /preferences (PreferencesViewModel),
+        // not local-only state; disabled until logged in since the API requires a
+        // real user session (see ProfileRoute / PreferencesViewModel.canEdit).
         SectionLabel(text = "Cài Đặt Trợ Năng")
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -219,6 +231,13 @@ fun ProfileScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                if (!preferencesState.isLoggedIn) {
+                    Text(
+                        text = "Đăng nhập ở mục \"Tài Khoản Đăng Nhập\" bên trên để lưu cài đặt trợ năng.",
+                        style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                    )
+                }
+
                 // Cỡ chữ
                 Column {
                     Text(
@@ -234,11 +253,12 @@ fun ProfileScreen(
                             .padding(top = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("Nhỏ", "Vừa", "Lớn").forEach { opt ->
+                        PreferencesUiState.FONT_SIZE_OPTIONS.forEach { opt ->
                             ChipButton(
                                 text = opt,
-                                isSelected = selectedFontSize == opt,
-                                onClick = { selectedFontSize = opt },
+                                isSelected = preferencesState.fontSizeOption == opt,
+                                onClick = { onFontSizeChange(opt) },
+                                enabled = preferencesState.canEdit,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -260,11 +280,12 @@ fun ProfileScreen(
                             .padding(top = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("Giọng Nữ", "Giọng Nam").forEach { opt ->
+                        PreferencesUiState.VOICE_OPTIONS.forEach { opt ->
                             ChipButton(
                                 text = opt,
-                                isSelected = selectedVoice == opt,
-                                onClick = { selectedVoice = opt },
+                                isSelected = preferencesState.voiceOption == opt,
+                                onClick = { onVoiceChange(opt) },
+                                enabled = preferencesState.canEdit,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -285,8 +306,9 @@ fun ProfileScreen(
                         ),
                     )
                     Switch(
-                        checked = highContrast,
-                        onCheckedChange = { highContrast = it },
+                        checked = preferencesState.highContrast,
+                        onCheckedChange = onHighContrastChange,
+                        enabled = preferencesState.canEdit,
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = YourEyesSuccess),
                     )
                 }
@@ -305,9 +327,20 @@ fun ProfileScreen(
                         ),
                     )
                     Switch(
-                        checked = hapticsEnabled,
-                        onCheckedChange = { hapticsEnabled = it },
+                        checked = preferencesState.hapticsEnabled,
+                        onCheckedChange = onHapticsChange,
+                        enabled = preferencesState.canEdit,
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = YourEyesSuccess),
+                    )
+                }
+
+                if (preferencesState.message.isNotBlank()) {
+                    Text(
+                        text = preferencesState.message,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = if (preferencesState.isError) YourEyesDanger else YourEyesSuccess,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     )
                 }
             }
@@ -404,12 +437,19 @@ private fun ChipButton(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(if (isSelected) YourEyesCyan else YourEyesMintSoft)
-            .clickable(onClick = onClick)
+            .background(
+                when {
+                    !enabled -> YourEyesMintSoft.copy(alpha = 0.5f)
+                    isSelected -> YourEyesCyan
+                    else -> YourEyesMintSoft
+                }
+            )
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -417,7 +457,7 @@ private fun ChipButton(
             text = text,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) Color.White else YourEyesTeal,
+                color = if (isSelected && enabled) Color.White else YourEyesTeal.copy(alpha = if (enabled) 1f else 0.6f),
             ),
         )
     }
