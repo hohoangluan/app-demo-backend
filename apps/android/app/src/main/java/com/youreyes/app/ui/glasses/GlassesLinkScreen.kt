@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
 import com.youreyes.app.ui.theme.YourEyesBorder
 import com.youreyes.app.ui.theme.YourEyesCyan
+import com.youreyes.app.ui.theme.YourEyesDanger
 import com.youreyes.app.ui.theme.YourEyesInk
 import com.youreyes.app.ui.theme.YourEyesMuted
 import com.youreyes.app.ui.theme.YourEyesShadow
@@ -49,6 +51,7 @@ fun GlassesLinkRoute(
         state = state,
         onGlassesDeviceIdChange = viewModel::onGlassesDeviceIdChange,
         onLinkClick = viewModel::link,
+        onUnlinkClick = viewModel::unlink,
         modifier = modifier,
     )
 }
@@ -58,6 +61,7 @@ fun GlassesLinkScreen(
     state: GlassesLinkUiState = GlassesLinkUiState(),
     onGlassesDeviceIdChange: (String) -> Unit = {},
     onLinkClick: () -> Unit = {},
+    onUnlinkClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ScreenShell(modifier = modifier, title = "Pairing Kính") {
@@ -122,11 +126,19 @@ fun GlassesLinkScreen(
                     enabled = state.canSubmit && !state.isLoading,
                 )
 
+                OutlinedButton(
+                    onClick = onUnlinkClick,
+                    enabled = state.canUnlink,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Hủy Liên Kết Kính Hiện Tại")
+                }
+
                 if (state.message.isNotBlank()) {
                     Text(
                         text = state.message,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = YourEyesSuccess,
+                            color = if (state.message.startsWith("❌")) YourEyesDanger else YourEyesSuccess,
                             fontWeight = FontWeight.Bold,
                         ),
                     )

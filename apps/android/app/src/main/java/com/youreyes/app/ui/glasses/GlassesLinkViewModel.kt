@@ -76,4 +76,35 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
     }
+
+    fun unlink() {
+        val state = _uiState.value
+        if (!state.canUnlink) return
+
+        _uiState.update { it.copy(isLoading = true, message = "Đang hủy liên kết...") }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = DeviceApiClient().unlinkGlassesDevice(
+                baseUrl = state.serverUrl.trimEnd('/'),
+                bearerToken = state.bearerToken,
+                userId = state.userId.trim(),
+            )
+
+            if (result.isSuccess) {
+                val unlinked = result.getOrThrow()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        message = if (unlinked) {
+                            "✅ Đã hủy liên kết kính."
+                        } else {
+                            "Không có kính nào đang liên kết với tài khoản này."
+                        },
+                    )
+                }
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Unknown error"
+                _uiState.update { it.copy(isLoading = false, message = "❌ Lỗi: $err") }
+            }
+        }
+    }
 }

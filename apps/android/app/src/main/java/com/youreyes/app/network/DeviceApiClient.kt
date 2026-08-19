@@ -9,6 +9,7 @@ import com.youreyes.app.model.DeviceRegisterPayload
 import com.youreyes.app.model.DeviceReportPayload
 import com.youreyes.app.model.GlassesLinkPayload
 import com.youreyes.app.model.PreferencesPayload
+import com.youreyes.app.model.SupportTicketResult
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -242,6 +243,36 @@ class DeviceApiClient {
             put("haptics_enabled", payload.hapticsEnabled)
         }
         requestJson(baseUrl, "PUT", "/api/v1/preferences", jsonBody = body, bearerToken = accessToken).toPreferencesPayload()
+    }
+
+    // -- Support tickets (apps/backend/src/app/api/support.py) -- session-gated, same as preferences above.
+
+    fun submitSupportTicket(
+        baseUrl: String,
+        accessToken: String,
+        category: String,
+        message: String,
+    ): Result<SupportTicketResult> = runCatching {
+        val body = JSONObject().apply {
+            put("category", category)
+            put("message", message)
+        }
+        val data = postJson(baseUrl, "/api/v1/support/tickets", body, bearerToken = accessToken)
+        SupportTicketResult(
+            id = data.getString("id"),
+            category = data.getString("category"),
+            createdAt = data.getString("created_at"),
+        )
+    }
+
+    /**
+     * POST /api/v1/device/glasses/unlink -- same Device Bearer token class as
+     * [linkGlassesDevice] above (project_context.md §6.13a). Idempotent server-side:
+     * `unlinked: false` just means there was no active pairing to clear, not an error.
+     */
+    fun unlinkGlassesDevice(baseUrl: String, bearerToken: String, userId: String): Result<Boolean> = runCatching {
+        val body = JSONObject().apply { put("user_id", userId) }
+        postJson(baseUrl, "/api/v1/device/glasses/unlink", body, bearerToken = bearerToken).getBoolean("unlinked")
     }
 
     // Convenience method used by FcmPushReceiver on token refresh

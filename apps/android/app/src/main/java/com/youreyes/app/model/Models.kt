@@ -152,6 +152,13 @@ data class PreferencesPayload(
     val hapticsEnabled: Boolean,
 )
 
+/** Result of POST /support/tickets (apps/backend/src/app/schemas/support.py). */
+data class SupportTicketResult(
+    val id: String,
+    val category: String,
+    val createdAt: String,
+)
+
 data class PendingReportRecord(
     val requestId: String,
     val userId: String,

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -70,6 +71,7 @@ fun ProfileRoute(
     modifier: Modifier = Modifier,
     onNavigateToDevTest: () -> Unit = {},
     onNavigateToAuth: () -> Unit = {},
+    onNavigateToSupport: () -> Unit = {},
 ) {
     val overviewViewModel: OverviewViewModel = viewModel()
     val state by overviewViewModel.uiState.collectAsState()
@@ -95,6 +97,7 @@ fun ProfileRoute(
         onRegisterClick = overviewViewModel::register,
         onNavigateToDevTest = onNavigateToDevTest,
         onNavigateToAuth = onNavigateToAuth,
+        onNavigateToSupport = onNavigateToSupport,
         preferencesState = preferencesState,
         onFontSizeChange = preferencesViewModel::onFontSizeChange,
         onVoiceChange = preferencesViewModel::onVoiceChange,
@@ -116,6 +119,7 @@ fun ProfileScreen(
     onRegisterClick: () -> Unit = {},
     onNavigateToDevTest: () -> Unit = {},
     onNavigateToAuth: () -> Unit = {},
+    onNavigateToSupport: () -> Unit = {},
     preferencesState: PreferencesUiState = PreferencesUiState(),
     onFontSizeChange: (String) -> Unit = {},
     onVoiceChange: (String) -> Unit = {},
@@ -188,6 +192,14 @@ fun ProfileScreen(
             icon = Icons.Default.AccountCircle,
             iconTone = YourEyesCyan,
             onClick = onNavigateToAuth,
+        )
+
+        RowCard(
+            title = "Hỗ Trợ & Góp Ý",
+            subtitle = "Gửi phản hồi hoặc yêu cầu hỗ trợ tới đội ngũ Your Eyes (cần đăng nhập).",
+            icon = Icons.Default.MailOutline,
+            iconTone = YourEyesTeal,
+            onClick = onNavigateToSupport,
         )
 
         // Section: Config Emergency Contact (1 Single Contact)

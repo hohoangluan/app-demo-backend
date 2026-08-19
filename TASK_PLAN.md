@@ -4,7 +4,11 @@
 > Nguá»“n contract: `project_context.md`. Blueprint: `architeture.md`. Quy tá## Trạng thái hiện tại
 
 - Ngày cập nhật: 2026-08-19
-- Phase hiện tại: **P0-P5 đã hoàn tất (FCM thực tế)**; bắt đầu **P6 — mở rộng màn hình Android theo cấu trúc backend hiện có** (task giao bởi hohoangluan, nhánh `ui/new`, xem chi tiết ở mục P6 bên dưới).
+- Phase hiện tại: **P0-P5 đã hoàn tất (FCM thực tế)**; **P6 — mở rộng màn hình Android
+  theo cấu trúc backend hiện có** gần xong: 5/6 mục đã làm (Activity Log, Auth thật,
+  Preferences thật, Support ticket, hủy liên kết kính), chỉ còn 1 mục thấp ưu tiên
+  (widget trạng thái nhạc/điều hướng trên Overview). Nhánh `ui/new`, xem chi tiết ở
+  mục P6 bên dưới.
 - Thành tựu chính:
   - Backend: 9/9 Public APIs + 2 Internal Device APIs + Workers (Delivery, Timeout, Callback) + FCM Real Transport adapter (`firebase-admin`). Pass 197 unit/API tests + E2E simulation script trên PostgreSQL container.
   - Android: Package đổi sang `com.youreyes.app` cho khớp Firebase. Tích hợp FCM Push Receiver (`FcmPushReceiver`) tự động re-register FCM token. Cài đặt đầy đủ 9 Native Action Handlers (YouTube Music cho `media_play`, Google Maps cho `navigation_start`, Native Call/Camera/Volume/Settings/Overlay). `gradlew.bat assembleDebug` BUILD SUCCESSFUL.
@@ -179,8 +183,22 @@ UI hiện có trong `apps/android`, các màn hình còn thiếu được xếp 
   - Test mới `PreferencesUiStateTest.kt` (5 test: `canEdit` theo 3 tổ hợp
     logged-in/loading, đúng danh sách `FONT_SIZE_OPTIONS`/`VOICE_OPTIONS` — có test
     regression xác nhận không còn "Lớn" sai).
-- [ ] Màn hình gửi yêu cầu hỗ trợ (`POST /support/tickets`) — chưa có UI nào.
-- [ ] Hủy liên kết kính (`POST /device/glasses/unlink`) — `GlassesLinkScreen` mới chỉ có link.
+- [x] **Màn hình gửi yêu cầu hỗ trợ** (`POST /support/tickets`, session-gated giống
+  preferences). File mới: `ui/support/SupportUiState.kt` (`CATEGORIES` là nguồn duy
+  nhất cho domain `Literal["feedback","support_request"]`, `canSubmit` kiểm cả độ dài
+  tin nhắn khớp `max_length=2000` server-side), `SupportViewModel.kt`,
+  `SupportScreen.kt` (chip chọn loại + textarea + đếm ký tự). `DeviceApiClient` thêm
+  `submitSupportTicket`. `ProfileScreen` thêm RowCard "Hỗ Trợ & Góp Ý", tab mới
+  `selectedTab = 8`. Test mới `SupportUiStateTest.kt` (6 test: logged-out, message
+  rỗng, quá 2000 ký tự, đang loading, đúng thứ tự category).
+- [x] **Hủy liên kết kính** (`POST /device/glasses/unlink`, cùng Device Bearer token
+  với `/link`, idempotent — không lỗi nếu không có gì để hủy). Thêm
+  `GlassesLinkUiState.canUnlink` (không cần `glassesDeviceId`, khác `canSubmit`),
+  `GlassesLinkViewModel.unlink()`, nút "Hủy Liên Kết Kính Hiện Tại" trong
+  `GlassesLinkScreen`. **Tiện sửa luôn 1 lỗi UI có sẵn phát hiện khi đụng đúng dòng
+  này**: `state.message` trước đó luôn hiện màu xanh (`YourEyesSuccess`) kể cả khi nội
+  dung là lỗi (bắt đầu bằng "❌") — đổi màu theo tiền tố. Test mới: 3 case cho
+  `canUnlink` thêm vào `GlassesLinkUiStateTest.kt` hiện có.
 - [ ] (Thấp ưu tiên) Widget trạng thái nhạc/điều hướng đang chạy trên Overview.
 
 Ghi chú kiến trúc phát hiện được: hệ thống này ("App Communication Server") là
@@ -205,6 +223,8 @@ cầu gốc của hohoangluan).
 | 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 4→5, `Use KTX extension function` 13→15, cùng category cosmetic có sẵn, không category mới); `assembleDebug` BUILD SUCCESSFUL |
 | 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `PreferencesUiStateTest` 5/5 mới pass, toàn bộ suite BUILD SUCCESSFUL |
 | 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint, số lượng warning mỗi category không đổi so với lần chạy trước (không category mới); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Support + Glasses Unlink (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `SupportUiStateTest` 6/6 mới, `GlassesLinkUiStateTest` 6/6 (3 test cũ + 3 test `canUnlink` mới), toàn bộ suite BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Support + Glasses Unlink (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 5→6, cùng category cosmetic có sẵn); `assembleDebug` BUILD SUCCESSFUL |
 
 Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
 `.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential

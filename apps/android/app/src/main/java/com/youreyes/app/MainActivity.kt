@@ -55,6 +55,7 @@ import com.youreyes.app.ui.glasses.GlassesLinkRoute
 import com.youreyes.app.ui.overview.OverviewRoute
 import com.youreyes.app.ui.profile.ProfileRoute
 import com.youreyes.app.ui.safety.SafetyScreen
+import com.youreyes.app.ui.support.SupportRoute
 import com.youreyes.app.ui.theme.AppDemoTheme
 import com.youreyes.app.ui.theme.YourEyesBorder
 import com.youreyes.app.ui.theme.YourEyesCyan
@@ -325,10 +326,12 @@ private fun AppRoot() {
                 modifier = modifier,
                 onNavigateToDevTest = { selectedTab = 5 },
                 onNavigateToAuth = { selectedTab = 7 },
+                onNavigateToSupport = { selectedTab = 8 },
             )
             5 -> FunctionTestRoute(modifier = modifier)
             6 -> ActivityLogRoute(modifier = modifier)
             7 -> AuthRoute(modifier = modifier)
+            8 -> SupportRoute(modifier = modifier)
             else -> GlassesLinkRoute(modifier = modifier)
         }
     }
