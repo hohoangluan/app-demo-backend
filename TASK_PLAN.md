@@ -3,8 +3,8 @@
 > Tracker bá» n vá»¯ng qua nhiá» u session. Cáº­p nháº­t file nÃ y sau má»—i thay Ä‘á»•i cÃ³ Ã½ nghÄ©a.
 > Nguá»“n contract: `project_context.md`. Blueprint: `architeture.md`. Quy tá## Trạng thái hiện tại
 
-- Ngày cập nhật: 2026-08-03
-- Phase hiện tại: **TOÀN BỘ PHASES (P0-P5) ĐÃ HOÀN TẤT VÀ TÍCH HỢP FCM THỰC TẾ**.
+- Ngày cập nhật: 2026-08-19
+- Phase hiện tại: **P0-P5 đã hoàn tất (FCM thực tế)**; bắt đầu **P6 — mở rộng màn hình Android theo cấu trúc backend hiện có** (task giao bởi hohoangluan, nhánh `ui/new`, xem chi tiết ở mục P6 bên dưới).
 - Thành tựu chính:
   - Backend: 9/9 Public APIs + 2 Internal Device APIs + Workers (Delivery, Timeout, Callback) + FCM Real Transport adapter (`firebase-admin`). Pass 197 unit/API tests + E2E simulation script trên PostgreSQL container.
   - Android: Package đổi sang `com.youreyes.app` cho khớp Firebase. Tích hợp FCM Push Receiver (`FcmPushReceiver`) tự động re-register FCM token. Cài đặt đầy đủ 9 Native Action Handlers (YouTube Music cho `media_play`, Google Maps cho `navigation_start`, Native Call/Camera/Volume/Settings/Overlay). `gradlew.bat assembleDebug` BUILD SUCCESSFUL.
@@ -109,6 +109,57 @@
 - [x] Seed/reset scripts, demo script và troubleshooting guide (demo_e2e_simulation.py verified end-to-end).
 - [x] Quality gates and build integrity verified.
 
+
+## P6 — Android UI: mở rộng màn hình theo cấu trúc backend
+
+Task giao bởi hohoangluan qua kênh khác (không phải qua TASK_PLAN gốc): "làm phần giao diện
+cho app android ... để cho app hoàn chỉnh hơn". Đối chiếu 5 API group đã có ở
+`apps/backend/src/app/api` (`auth`, `preferences`, `support`, `glasses`, `device`) với
+UI hiện có trong `apps/android`, các màn hình còn thiếu được xếp việc theo thứ tự:
+
+- [x] **Activity Log** — màn hình lịch sử lệnh kính đã gửi tới điện thoại (đặt xe, nhạc,
+  điều hướng, khẩn cấp, gọi liên hệ...), đọc trực tiếp bảng `commands` có sẵn qua
+  `AppDatabaseHelper.getAllCommands()` — không cần đổi backend. File mới:
+  `ui/activitylog/ActivityLogUiState.kt` (pure mapping `CommandRecord -> ActivityLogRow`,
+  unit-testable), `ActivityLogViewModel.kt`, `ActivityLogScreen.kt`; test mới
+  `ActivityLogUiStateTest.kt` (9 test: label theo action, fallback action lạ, 3 trạng thái
+  status kể cả status lạ, JSON lỗi định dạng không crash, `isEmpty`). Nối điều hướng: thêm
+  `RowCard` mới trên `OverviewScreen`, thêm tab ẩn (`selectedTab = 6`) trong
+  `MainActivity.AppRoot`. Không đổi `CommunityScreen`/`FeaturesScreen` (không có model
+  backend hậu thuẫn "cộng đồng"; `FeaturesScreen`'s `onClick = null` là chủ đích — tính
+  năng do kính tự kích hoạt qua giọng nói, không phải bấm từ điện thoại).
+- [ ] Auth thật (đăng ký/OTP/đăng nhập) thay cho form tự gõ `user_id`/token thủ công ở
+  Profile — backend đã có `POST /auth/register`, `/auth/otp/verify`, `/auth/login`,
+  `/auth/logout`.
+- [ ] Nối `GET/PUT /preferences` thật cho khối "Cài Đặt Trợ Năng" ở Profile (hiện chỉ là
+  `remember` cục bộ, mất khi tắt app).
+- [ ] Màn hình gửi yêu cầu hỗ trợ (`POST /support/tickets`) — chưa có UI nào.
+- [ ] Hủy liên kết kính (`POST /device/glasses/unlink`) — `GlassesLinkScreen` mới chỉ có link.
+- [ ] (Thấp ưu tiên) Widget trạng thái nhạc/điều hướng đang chạy trên Overview.
+
+Ghi chú kiến trúc phát hiện được: hệ thống này ("App Communication Server") là
+**trung gian** giữa Server Kính (external, ngoài phạm vi — xem
+`docs/glasses-server-client-api.md` §"Ngoài phạm vi") và app Android, KHÔNG PHẢI bản thân
+Server Kính. `base URL` mặc định (`OverviewViewModel.DEFAULT_SERVER_URL`) và package
+Android (`com.youreyes.app`) xác nhận đây cùng hệ sinh thái "Your Eyes" với repo
+`your-eyes-project/backend`, nhưng là 2 backend riêng — cần xác nhận với hohoangluan xem
+tính năng `dispatch_kinh_action` bên `backend/` (billing) có bị trùng vai trò với hệ thống
+này hay không trước khi phát triển thêm cả hai song song.
+
+Nhánh làm việc: `ui/new` (tạo local, chưa push — chờ hoàn tất từng mục rồi push theo yêu
+cầu gốc của hohoangluan).
+
+### P6 quality-gate evidence (bảng riêng — bảng evidence gốc bên dưới có lỗi encoding cũ, không sửa để tránh hỏng thêm)
+
+| Ngày | Phạm vi | Lệnh | Kết quả |
+|---|---|---|---|
+| 2026-08-19 | P6 Activity Log (session 6) | PowerShell: `$env:ANDROID_HOME`/`$env:JAVA_HOME` set thủ công (SDK tại `C:\Users\Bong\AppData\Local\Android\Sdk`, JDK Temurin 25), `.\gradlew.bat test --no-daemon` | Pass — `ActivityLogUiStateTest` 9/9 mới pass, toàn bộ `testDebugUnitTest` BUILD SUCCESSFUL, không test cũ nào hỏng |
+| 2026-08-19 | P6 Activity Log (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (73 warning, toàn bộ thuộc các category cosmetic có sẵn từ trước; `ModifierParameter` xuất hiện thêm 2 lần đúng theo pattern `modifier` cuối cùng mà mọi Screen khác trong repo đã dùng); `assembleDebug` BUILD SUCCESSFUL |
+
+Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
+`.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential
+thật, chỉ đủ để Google Services Gradle plugin không crash khi build/test) — không commit,
+đã xác nhận vẫn nằm trong `.gitignore`.
 
 ## Quality-gate evidence
 

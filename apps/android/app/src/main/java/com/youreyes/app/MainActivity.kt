@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import com.youreyes.app.ui.activitylog.ActivityLogRoute
 import com.youreyes.app.ui.community.CommunityScreen
 import com.youreyes.app.ui.features.FeaturesScreen
 import com.youreyes.app.ui.functiontest.FunctionTestRoute
@@ -311,6 +312,7 @@ private fun AppRoot() {
                 modifier = modifier,
                 onNavigateToFeatures = { selectedTab = 1 },
                 onNavigateToProfile = { selectedTab = 4 },
+                onNavigateToActivityLog = { selectedTab = 6 },
             )
             1 -> FeaturesScreen(modifier = modifier)
             2 -> SafetyScreen(
@@ -323,6 +325,7 @@ private fun AppRoot() {
                 onNavigateToDevTest = { selectedTab = 5 },
             )
             5 -> FunctionTestRoute(modifier = modifier)
+            6 -> ActivityLogRoute(modifier = modifier)
             else -> GlassesLinkRoute(modifier = modifier)
         }
     }

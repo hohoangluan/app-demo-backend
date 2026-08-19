@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
@@ -60,6 +61,7 @@ fun OverviewRoute(
     modifier: Modifier = Modifier,
     onNavigateToFeatures: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToActivityLog: () -> Unit = {},
 ) {
     val viewModel: OverviewViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
@@ -68,6 +70,7 @@ fun OverviewRoute(
         state = state,
         onNavigateToFeatures = onNavigateToFeatures,
         onNavigateToProfile = onNavigateToProfile,
+        onNavigateToActivityLog = onNavigateToActivityLog,
         modifier = modifier,
     )
 }
@@ -77,6 +80,7 @@ fun OverviewScreen(
     state: OverviewUiState,
     onNavigateToFeatures: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToActivityLog: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ScreenShell(modifier = modifier) {
@@ -150,6 +154,14 @@ fun OverviewScreen(
             icon = Icons.Default.Favorite,
             iconTone = YourEyesTeal,
             onClick = onNavigateToProfile,
+        )
+
+        RowCard(
+            title = "Lịch Sử Hoạt Động Của Kính",
+            subtitle = "Xem lại các lệnh gần đây: đặt xe, phát nhạc, điều hướng, khẩn cấp, gọi liên hệ...",
+            icon = Icons.Default.DateRange,
+            iconTone = YourEyesNavy,
+            onClick = onNavigateToActivityLog,
         )
     }
 }
