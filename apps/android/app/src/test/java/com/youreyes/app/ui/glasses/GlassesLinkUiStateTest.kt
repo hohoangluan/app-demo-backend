@@ -74,4 +74,11 @@ class GlassesLinkUiStateTest {
         )
         assertFalse(filled.canUnlink)
     }
+
+    @Test
+    fun `isPaired reflects whether a locally remembered pairing exists`() {
+        assertFalse(GlassesLinkUiState().isPaired)
+        assertFalse(GlassesLinkUiState(pairedDeviceId = "").isPaired)
+        assertTrue(GlassesLinkUiState(pairedDeviceId = "GLASSES-123").isPaired)
+    }
 }

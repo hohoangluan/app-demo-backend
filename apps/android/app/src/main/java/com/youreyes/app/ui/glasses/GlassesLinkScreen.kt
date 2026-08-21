@@ -1,11 +1,17 @@
 package com.youreyes.app.ui.glasses
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -19,7 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +108,8 @@ fun GlassesLinkScreen(
             }
         }
 
+        PairingStatusCard(pairedDeviceId = state.pairedDeviceId)
+
         SectionLabel(text = "Nhập Mã Serial Kính")
 
         Card(
@@ -115,7 +125,7 @@ fun GlassesLinkScreen(
                 OutlinedTextField(
                     value = state.glassesDeviceId,
                     onValueChange = onGlassesDeviceIdChange,
-                    label = { Text("Số serial kính (Ví dụ: YE-2A4B-9F70)") },
+                    label = { Text("Mã kính (VD: YE-2A4B-9F70 hoặc GLASSES-123)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -149,10 +159,46 @@ fun GlassesLinkScreen(
         SectionLabel(text = "Hướng Dẫn Pairing")
 
         RowCard(
-            title = "Tìm mã Serial trên kính",
-            subtitle = "Mã Serial gồm 10 ký tự được in laser sắc nét ở mặt trong gọng kính phải.",
+            title = "Tìm mã trên kính",
+            subtitle = "Mã kính được in laser ở mặt trong gọng kính phải, hoặc do đội cấp kính cung cấp.",
             icon = Icons.Default.Info,
             iconTone = YourEyesCyan,
         )
+    }
+}
+
+@Composable
+private fun PairingStatusCard(pairedDeviceId: String) {
+    val isPaired = pairedDeviceId.isNotBlank()
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(if (isPaired) YourEyesSuccess else YourEyesMuted),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = if (isPaired) "Đang liên kết" else "Chưa liên kết kính nào",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk, fontSize = 14.sp),
+                )
+                if (isPaired) {
+                    Text(
+                        text = "Mã kính: $pairedDeviceId",
+                        style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                    )
+                }
+            }
+        }
     }
 }

@@ -277,8 +277,52 @@ này hay không trước khi phát triển thêm cả hai song song.
     `withLanguagesSwapped()` để test được logic đổi chiều mà không cần ViewModel),
     `MeetingUiStateTest` (4 test — `isEmpty`, `formatDuration` dưới/trên 1 giờ).
 
-Nhánh làm việc: `ui/vphoa` (tạo local, chưa push — chờ hohoangluan thêm `Bong142D`
-làm collaborator vào `hohoangluan/app-demo-backend`, hiện push bị 403).
+- [x] **Test chuỗi Server Kính → App Communication Server → Điện thoại (2026-08-22)**,
+  theo yêu cầu người dùng, dùng repo thật `hohoangluan/visioncare-host-demo` (clone
+  làm sibling repo cạnh `app-demo-backend`, cùng cách xử lý như chính repo này —
+  thêm vào `.gitignore` gốc Your Eyes, không phải submodule).
+  - Server Kính là hệ thống ESP32 riêng (STT Zipformer cục bộ, intent SetFit +
+    Gemini fallback, TTS VieNeu, giao thức audio ADPCM tuỳ biến) — **không phải**
+    Server Kính chạy trong app-demo-backend, xác nhận đúng giả thuyết trước đó
+    (`docs/glasses-server-client-api.md`).
+  - Khớp `PUBLIC_API_TOKEN_HASH` local với đúng token Server Kính đã hardcode sẵn
+    trong `test_live_server_calls.py`/`config.py` mặc định
+    (`f23ChvjGZt_WYrY-A8eJAyxO5LVEF_TGujmE7F_gRAY`) — cùng cách đã làm với
+    `DEVICE_API_TOKEN_HASH` khớp app Android, để không phải sửa gì bên Server Kính.
+    Server Kính mặc định trỏ `http://127.0.0.1:8001` — **đúng cổng local đã dùng
+    từ trước** (do cổng 8000 bị chiếm), xác nhận quy ước cổng đã khớp sẵn giữa 2
+    team.
+  - Cài venv nhẹ (`httpx python-dotenv numpy`, không cần STT/TTS/Gemini nặng) để
+    chạy `test_live_server_calls.py` — pairing `glasses-123`↔`user-100` + toàn bộ
+    9 action (điều hướng, gọi liên hệ, khẩn cấp, đặt xe, nhạc) đều `202`, câu trả
+    lời tiếng Việt đúng ngữ cảnh. **Không phát hiện lệch contract nào** — toàn bộ
+    field JSON khớp chính xác giữa 2 phía.
+  - Chưa có điện thoại thật nên tự mô phỏng chặng cuối: đăng ký 1 "điện thoại giả"
+    (`device-100`) rồi `POST /device/report` như điện thoại thật báo kết quả —
+    operation chuyển đúng `processing`→`succeeded`, đúng thứ Server Kính sẽ nhận
+    khi poll. Phát hiện phụ: 1 request để quá 60s tự chuyển đúng `timed_out` với
+    mã `REPORT_TIMEOUT` — worker timeout hoạt động đúng.
+  - **Giới hạn còn lại**: chưa test được FCM thật (cần Firebase Admin service
+    account — bí mật của team, không tự tạo được) + chưa có điện thoại thật kết
+    nối qua `adb`.
+- [x] **Tối ưu quy trình pairing điện thoại-kính (frontend nhỏ, theo lựa chọn người
+  dùng qua AskUserQuestion — không đổi backend)**:
+  - `GlassesLinkUiState` thêm `pairedDeviceId`/`isPaired` — nhớ cục bộ lần pairing
+    thành công gần nhất (backend không có endpoint đọc trạng thái pairing hiện tại,
+    chỉ có `/link`+`/unlink` ghi, nên đây là "best record" phía app, không phải đọc
+    trực tiếp từ server).
+    Đã ghi rõ trong code: giá trị này có thể lệch nếu pairing bị đổi từ nơi khác
+    (máy cài khác, hoặc chính `test_live_server_calls.py` pairing đè `user-100`) —
+    `canSubmit`/`canUnlink` luôn gọi server thật, không tin giá trị nhớ cục bộ.
+  - `GlassesLinkScreen` thêm `PairingStatusCard` hiển thị trạng thái pairing hiện
+    tại (chấm xanh/xám + mã kính đang liên kết).
+  - Tự động viết hoa mã kính khi gõ (nhất quán định dạng), sửa hint text không
+    còn khẳng định cứng "10 ký tự" (không đúng với ví dụ thật `glasses-123` của
+    Server Kính).
+  - Test mới: 1 test `isPaired` thêm vào `GlassesLinkUiStateTest.kt` hiện có.
+
+Nhánh làm việc: `ui/vphoa`, đã push lên `hohoangluan/app-demo-backend` (đã được thêm
+collaborator) và tạo PR #1: <https://github.com/hohoangluan/app-demo-backend/pull/1>.
 
 ### P6 quality-gate evidence (bảng riêng — bảng evidence gốc bên dưới có lỗi encoding cũ, không sửa để tránh hỏng thêm)
 
@@ -296,6 +340,8 @@ làm collaborator vào `hohoangluan/app-demo-backend`, hiện push bị 403).
 | 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | curl trực tiếp toàn bộ endpoint mới (auth, preferences, support, glasses link/unlink, device register) bằng đúng field Kotlin gửi | Pass tất cả — response khớp chính xác schema; unlink lần 2 đúng `unlinked:false` (idempotent) |
 | 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 48/48 test (toàn repo), 0 lỗi lint, 0 warning compiler (dọn 1 elvis-operator dư sau khi sửa); `assembleDebug` BUILD SUCCESSFUL |
 | 2026-08-22 | Album/Guide/Translation/Meeting (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 61/61 test (toàn repo, tăng từ 48), 0 lỗi lint, 0 warning compiler; `assembleDebug` BUILD SUCCESSFUL (kể cả dependency Coil mới resolve thành công) |
+| 2026-08-22 | Test Server Kính thật (session 6 tiếp) | `python test_live_server_calls.py` (visioncare-host-demo, venv riêng) nhắm vào backend local port 8001 | Pass — health/pairing/toàn bộ 9 action đều `202`, không lệch contract; verify thêm bằng `/device/report` giả lập → operation `succeeded` đúng |
+| 2026-08-22 | Tối ưu pairing UX (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 62/62 test (toàn repo), 0 lỗi lint, 0 warning compiler; `assembleDebug` BUILD SUCCESSFUL |
 
 Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
 `.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential

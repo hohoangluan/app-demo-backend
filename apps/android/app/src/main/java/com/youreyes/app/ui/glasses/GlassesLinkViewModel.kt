@@ -36,6 +36,7 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
         serverUrl = prefs.getString(FcmPushReceiver.KEY_BASE_URL, "") ?: "",
         bearerToken = prefs.getString(FcmPushReceiver.KEY_BEARER_TOKEN, "") ?: "",
         userId = prefs.getString(FcmPushReceiver.KEY_USER_ID, "") ?: "",
+        pairedDeviceId = prefs.getString(KEY_PAIRED_DEVICE_ID, "") ?: "",
     )
 
     /**
@@ -49,12 +50,14 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { if (it.userId != saved) it.copy(userId = saved) else it }
     }
 
-    fun onGlassesDeviceIdChange(id: String) = _uiState.update { it.copy(glassesDeviceId = id) }
+    /** Auto-uppercase as the user types — every real device_id seen so far (glasses serials, Server Kính's own "glasses-123" demo default) reads more consistently normalized than mixed-case free text. */
+    fun onGlassesDeviceIdChange(id: String) = _uiState.update { it.copy(glassesDeviceId = id.uppercase()) }
 
     fun link() {
         val state = _uiState.value
         if (!state.canSubmit) return
 
+        val normalizedDeviceId = state.glassesDeviceId.trim()
         _uiState.update { it.copy(isLoading = true, message = "Đang pairing...") }
         viewModelScope.launch(Dispatchers.IO) {
             val result = DeviceApiClient().linkGlassesDevice(
@@ -62,13 +65,18 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                 bearerToken = state.bearerToken,
                 payload = GlassesLinkPayload(
                     userId = state.userId.trim(),
-                    deviceId = state.glassesDeviceId.trim(),
+                    deviceId = normalizedDeviceId,
                 ),
             )
 
             if (result.isSuccess) {
+                prefs.edit().putString(KEY_PAIRED_DEVICE_ID, normalizedDeviceId).apply()
                 _uiState.update {
-                    it.copy(isLoading = false, message = "✅ Đã pairing kính thành công.")
+                    it.copy(
+                        isLoading = false,
+                        message = "✅ Đã pairing kính thành công.",
+                        pairedDeviceId = normalizedDeviceId,
+                    )
                 }
             } else {
                 val err = result.exceptionOrNull()?.message ?: "Unknown error"
@@ -91,6 +99,10 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
 
             if (result.isSuccess) {
                 val unlinked = result.getOrThrow()
+                // Clear the local record either way: even "unlinked: false" (nothing
+                // server-side to clear) means this account is not paired right now,
+                // so a stale local pairedDeviceId would be wrong either way.
+                prefs.edit().remove(KEY_PAIRED_DEVICE_ID).apply()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -99,6 +111,7 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                         } else {
                             "Không có kính nào đang liên kết với tài khoản này."
                         },
+                        pairedDeviceId = "",
                     )
                 }
             } else {
@@ -106,5 +119,9 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                 _uiState.update { it.copy(isLoading = false, message = "❌ Lỗi: $err") }
             }
         }
+    }
+
+    companion object {
+        const val KEY_PAIRED_DEVICE_ID = "glasses_paired_device_id"
     }
 }
