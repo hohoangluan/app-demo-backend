@@ -47,16 +47,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.youreyes.app.ui.activitylog.ActivityLogRoute
+import com.youreyes.app.ui.album.AlbumRoute
 import com.youreyes.app.ui.auth.AuthRoute
 import com.youreyes.app.ui.community.CommunityScreen
 import com.youreyes.app.ui.features.FeaturesScreen
 import com.youreyes.app.ui.functiontest.FunctionTestRoute
 import com.youreyes.app.ui.glasses.GlassesLinkRoute
+import com.youreyes.app.ui.guide.UserGuideScreen
+import com.youreyes.app.ui.meeting.MeetingRoute
 import com.youreyes.app.ui.overview.OverviewRoute
 import com.youreyes.app.ui.profile.ProfileRoute
 import com.youreyes.app.ui.safety.SafetyScreen
 import com.youreyes.app.ui.support.SupportRoute
 import com.youreyes.app.ui.theme.AppDemoTheme
+import com.youreyes.app.ui.translation.TranslationRoute
 import com.youreyes.app.ui.theme.YourEyesBorder
 import com.youreyes.app.ui.theme.YourEyesCyan
 import com.youreyes.app.ui.theme.YourEyesInk
@@ -315,6 +319,10 @@ private fun AppRoot() {
                 onNavigateToFeatures = { selectedTab = 1 },
                 onNavigateToProfile = { selectedTab = 4 },
                 onNavigateToActivityLog = { selectedTab = 6 },
+                onNavigateToAlbum = { selectedTab = 9 },
+                onNavigateToGuide = { selectedTab = 10 },
+                onNavigateToTranslation = { selectedTab = 11 },
+                onNavigateToMeeting = { selectedTab = 12 },
             )
             1 -> FeaturesScreen(modifier = modifier)
             2 -> SafetyScreen(
@@ -332,6 +340,10 @@ private fun AppRoot() {
             6 -> ActivityLogRoute(modifier = modifier)
             7 -> AuthRoute(modifier = modifier)
             8 -> SupportRoute(modifier = modifier)
+            9 -> AlbumRoute(modifier = modifier)
+            10 -> UserGuideScreen(modifier = modifier)
+            11 -> TranslationRoute(modifier = modifier)
+            12 -> MeetingRoute(modifier = modifier)
             else -> GlassesLinkRoute(modifier = modifier)
         }
     }

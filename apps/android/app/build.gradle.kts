@@ -61,5 +61,9 @@ dependencies {
 
     // Coroutines for background registration call
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    // Loads photo/video thumbnails from MediaStore content:// URIs for the Album screen
+    // (no network fetcher needed — Coil reads local content:// URIs natively).
+    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
 }
 

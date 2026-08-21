@@ -59,6 +59,7 @@ import com.youreyes.app.ui.theme.YourEyesMintSoft
 import com.youreyes.app.ui.theme.YourEyesMuted
 import com.youreyes.app.ui.theme.YourEyesNavy
 import com.youreyes.app.ui.theme.YourEyesShadow
+import com.youreyes.app.ui.theme.YourEyesWarning
 
 @Composable
 fun ScreenShell(
@@ -323,6 +324,35 @@ fun MiniStat(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+/**
+ * Banner flagging a screen (or part of one) as a UI mock with no real backend behind
+ * it yet — e.g. Dịch Thuật/Biên Bản Họp, built ahead of a `translate`/`meeting_record`
+ * action existing in the Public API contract. Keeps a demo screen from looking
+ * indistinguishable from a working one.
+ */
+@Composable
+fun DemoBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(YourEyesWarning.copy(alpha = 0.15f))
+            .padding(12.dp),
+    ) {
+        Text(
+            text = "🧪 $text",
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = YourEyesWarning,
+                fontSize = 12.sp,
+            ),
+        )
     }
 }
 

@@ -239,6 +239,44 @@ này hay không trước khi phát triển thêm cả hai song song.
   `isSpotifyInstalled` — cần `PackageManager` thật, nhất quán với toàn bộ phần
   context-dependent khác của `ActionRegistry` (không có Robolectric trong repo này).
 
+- [x] **Tham khảo Rokid Glasses (video + ảnh chụp màn hình + trang sản phẩm
+  droidshop.vn, 2026-08-21/22)** — người dùng xác nhận giữ nguyên giao diện hiện tại
+  (không đổi theo Rokid), chỉ bổ sung tính năng còn thiếu. Chọn qua AskUserQuestion 2
+  nhóm:
+  - **Nhóm A (thuần frontend, làm ngay)** — cả 2 mục được chọn:
+    - **Album Ảnh & Video** (`ui/album/`): liệt kê ảnh chụp qua `camera_capture` từ
+      MediaStore, lọc theo prefix tên file `YourEyes_` — không cần quyền
+      `READ_MEDIA_IMAGES` vì mọi ảnh đều do chính app `insert()` (Android Scoped
+      Storage luôn cho app đọc lại media do chính nó sở hữu). **Sửa luôn
+      `CameraCaptureHandler`** khi đụng đúng chỗ: (1) gắn `EXTRA_OUTPUT` với tên file
+      có prefix để Album lọc được, (2) phát hiện bug có sẵn — handler dùng
+      `context.startActivity()` trực tiếp thay vì `launchUiIntent` như mọi handler
+      khác, nghĩa là camera_capture có thể bị Android âm thầm chặn khi trigger từ
+      push nền (cùng loại bug các handler khác đã né) — đã sửa dùng đúng
+      `launchUiIntent`. Thêm dependency mới `io.coil-kt.coil3:coil-compose:3.2.0` để
+      hiển thị lưới ảnh (chưa có thư viện load ảnh nào trong repo trước đó).
+    - **Hướng Dẫn Sử Dụng** (`ui/guide/`): danh sách FAQ dạng accordion, nội dung tĩnh
+      mô tả từng luồng thật đã có trong app (đăng nhập, pairing kính, SOS, lịch sử
+      hoạt động, album, cài đặt trợ năng, hỗ trợ).
+  - **Nhóm B (cần action mới ở backend — "làm UI mock trước")**:
+    - **Dịch Thuật** (`ui/translation/`): giả lập STT+dịch bằng câu mẫu có sẵn sau
+      1.5s delay khi bấm mic, có đổi chiều ngôn ngữ. Chưa có action `translate` nào
+      trong contract Public API — hiện `DemoBanner` rõ ràng.
+    - **Biên Bản Họp** (`ui/meeting/`): giả lập ghi âm + phiên âm theo thời gian thực
+      (thêm dòng transcript mẫu mỗi 4 giây), lưu danh sách biên bản trong bộ nhớ (mất
+      khi tắt app — nội dung toàn bộ là giả nên cố tình không lưu). Cũng hiện
+      `DemoBanner`.
+    - Thêm component dùng chung `DemoBanner` (`ui/components/Components.kt`) cho cả 2
+      màn hình, tránh trông giống tính năng thật đang hoạt động.
+  - Nối navigation: 4 `RowCard` mới trên `OverviewScreen`, tab `selectedTab = 9..12`
+    trong `MainActivity.AppRoot`.
+  - Test mới: `AlbumUiStateTest` (2 test — không test được case có item vì
+    `android.net.Uri` không dựng được trên JVM thuần không Robolectric, ghi rõ lý do
+    trong comment), `GuideSectionsTest` (3 test — không rỗng/không trùng/không sót
+    placeholder), `TranslationUiStateTest` (4 test — tách hàm thuần
+    `withLanguagesSwapped()` để test được logic đổi chiều mà không cần ViewModel),
+    `MeetingUiStateTest` (4 test — `isEmpty`, `formatDuration` dưới/trên 1 giờ).
+
 Nhánh làm việc: `ui/vphoa` (tạo local, chưa push — chờ hohoangluan thêm `Bong142D`
 làm collaborator vào `hohoangluan/app-demo-backend`, hiện push bị 403).
 
@@ -257,6 +295,7 @@ làm collaborator vào `hohoangluan/app-demo-backend`, hiện push bị 403).
 | 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `docker compose -f infra/compose.yaml --env-file .env up -d` + `alembic upgrade head` (local, port 8001) | Pass — 7 bảng đúng như migration, `/health/live` và `/health/ready` đều `ok` |
 | 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | curl trực tiếp toàn bộ endpoint mới (auth, preferences, support, glasses link/unlink, device register) bằng đúng field Kotlin gửi | Pass tất cả — response khớp chính xác schema; unlink lần 2 đúng `unlinked:false` (idempotent) |
 | 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 48/48 test (toàn repo), 0 lỗi lint, 0 warning compiler (dọn 1 elvis-operator dư sau khi sửa); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-22 | Album/Guide/Translation/Meeting (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 61/61 test (toàn repo, tăng từ 48), 0 lỗi lint, 0 warning compiler; `assembleDebug` BUILD SUCCESSFUL (kể cả dependency Coil mới resolve thành công) |
 
 Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
 `.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential

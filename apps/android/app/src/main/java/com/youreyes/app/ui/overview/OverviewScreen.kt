@@ -15,12 +15,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -63,6 +67,10 @@ fun OverviewRoute(
     onNavigateToFeatures: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToActivityLog: () -> Unit = {},
+    onNavigateToAlbum: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {},
+    onNavigateToTranslation: () -> Unit = {},
+    onNavigateToMeeting: () -> Unit = {},
 ) {
     val viewModel: OverviewViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
@@ -75,6 +83,10 @@ fun OverviewRoute(
         onNavigateToFeatures = onNavigateToFeatures,
         onNavigateToProfile = onNavigateToProfile,
         onNavigateToActivityLog = onNavigateToActivityLog,
+        onNavigateToAlbum = onNavigateToAlbum,
+        onNavigateToGuide = onNavigateToGuide,
+        onNavigateToTranslation = onNavigateToTranslation,
+        onNavigateToMeeting = onNavigateToMeeting,
         modifier = modifier,
     )
 }
@@ -85,6 +97,10 @@ fun OverviewScreen(
     onNavigateToFeatures: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToActivityLog: () -> Unit = {},
+    onNavigateToAlbum: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {},
+    onNavigateToTranslation: () -> Unit = {},
+    onNavigateToMeeting: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ScreenShell(modifier = modifier) {
@@ -166,6 +182,38 @@ fun OverviewScreen(
             icon = Icons.Default.DateRange,
             iconTone = YourEyesNavy,
             onClick = onNavigateToActivityLog,
+        )
+
+        RowCard(
+            title = "Album Ảnh & Video",
+            subtitle = "Xem lại ảnh đã chụp qua lệnh của kính",
+            icon = Icons.Default.Photo,
+            iconTone = YourEyesTeal,
+            onClick = onNavigateToAlbum,
+        )
+
+        RowCard(
+            title = "Hướng Dẫn Sử Dụng",
+            subtitle = "Tìm hiểu cách dùng từng tính năng của Your Eyes",
+            icon = Icons.AutoMirrored.Filled.Help,
+            iconTone = YourEyesCyan,
+            onClick = onNavigateToGuide,
+        )
+
+        RowCard(
+            title = "Dịch Thuật (Demo)",
+            subtitle = "Dịch giọng nói thời gian thực — bản demo, chưa nối AI thật",
+            icon = Icons.Default.Translate,
+            iconTone = YourEyesTeal,
+            onClick = onNavigateToTranslation,
+        )
+
+        RowCard(
+            title = "Biên Bản Họp (Demo)",
+            subtitle = "Ghi âm & phiên âm cuộc họp — bản demo, chưa nối AI thật",
+            icon = Icons.Default.Groups,
+            iconTone = YourEyesNavy,
+            onClick = onNavigateToMeeting,
         )
     }
 }
