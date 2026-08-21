@@ -9,6 +9,8 @@ import com.youreyes.app.model.PreferencesPayload
 import com.youreyes.app.network.DeviceApiClient
 import com.youreyes.app.ui.auth.AuthViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,36 +86,53 @@ class PreferencesViewModel(application: Application) : AndroidViewModel(applicat
     fun onHighContrastChange(value: Boolean) = applyThenSave { it.copy(highContrast = value) }
     fun onHapticsChange(value: Boolean) = applyThenSave { it.copy(hapticsEnabled = value) }
 
+    /** Coalesces a burst of rapid taps into the single PUT that matters — see [applyThenSave]. */
+    private var pendingSaveJob: Job? = null
+
     /**
-     * Updates the field immediately (the toggle/chip responds right away) and saves to
-     * the server in the background — 4 small single-user settings, not worth a separate
-     * "Save" button/step.
+     * Updates the field immediately (the toggle/chip responds right away) and debounces
+     * the server save behind it.
+     *
+     * Without the debounce, tapping through several chips fast (e.g. Nhỏ -> Vừa -> To)
+     * would fire one PUT per tap on independent connections with no ordering guarantee;
+     * if the "Nhỏ" request happened to land after "To" server-side, the UI would keep
+     * showing "To" (this method never re-applies a network result on success) while the
+     * server silently kept "Nhỏ" — reappearing next time preferences reload. Cancelling
+     * the previous pending job and waiting [SAVE_DEBOUNCE_MS] before actually sending
+     * means only the last tap in a burst ever reaches the network.
      */
     private fun applyThenSave(update: (PreferencesUiState) -> PreferencesUiState) {
         if (!_uiState.value.canEdit) return
         val next = update(_uiState.value)
         _uiState.value = next
-        save(next)
+
+        pendingSaveJob?.cancel()
+        pendingSaveJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(SAVE_DEBOUNCE_MS)
+            save(next)
+        }
     }
 
-    private fun save(state: PreferencesUiState) {
+    private suspend fun save(state: PreferencesUiState) {
         val token = accessToken() ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = DeviceApiClient().updatePreferences(
-                baseUrl(),
-                token,
-                PreferencesPayload(
-                    fontSizeOption = state.fontSizeOption,
-                    voiceOption = state.voiceOption,
-                    highContrast = state.highContrast,
-                    hapticsEnabled = state.hapticsEnabled,
-                ),
-            )
-            if (result.isFailure) {
-                _uiState.update {
-                    it.copy(isError = true, message = "❌ Lưu cài đặt thất bại: ${result.exceptionOrNull()?.message}")
-                }
+        val result = DeviceApiClient().updatePreferences(
+            baseUrl(),
+            token,
+            PreferencesPayload(
+                fontSizeOption = state.fontSizeOption,
+                voiceOption = state.voiceOption,
+                highContrast = state.highContrast,
+                hapticsEnabled = state.hapticsEnabled,
+            ),
+        )
+        if (result.isFailure) {
+            _uiState.update {
+                it.copy(isError = true, message = "❌ Lưu cài đặt thất bại: ${result.exceptionOrNull()?.message}")
             }
         }
+    }
+
+    companion object {
+        private const val SAVE_DEBOUNCE_MS = 400L
     }
 }

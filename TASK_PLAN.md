@@ -7,8 +7,9 @@
 - Phase hiện tại: **P0-P5 đã hoàn tất (FCM thực tế)**; **P6 — mở rộng màn hình Android
   theo cấu trúc backend hiện có** gần xong: 5/6 mục đã làm (Activity Log, Auth thật,
   Preferences thật, Support ticket, hủy liên kết kính), chỉ còn 1 mục thấp ưu tiên
-  (widget trạng thái nhạc/điều hướng trên Overview). Nhánh `ui/new`, xem chi tiết ở
-  mục P6 bên dưới.
+  (widget trạng thái nhạc/điều hướng trên Overview). Đã đổi nhánh làm việc thành
+  **`ui/vphoa`** (đổi tên từ `ui/new` theo yêu cầu người phối hợp — cùng lịch sử
+  commit). Xem chi tiết ở mục P6 bên dưới.
 - Thành tựu chính:
   - Backend: 9/9 Public APIs + 2 Internal Device APIs + Workers (Delivery, Timeout, Callback) + FCM Real Transport adapter (`firebase-admin`). Pass 197 unit/API tests + E2E simulation script trên PostgreSQL container.
   - Android: Package đổi sang `com.youreyes.app` cho khớp Firebase. Tích hợp FCM Push Receiver (`FcmPushReceiver`) tự động re-register FCM token. Cài đặt đầy đủ 9 Native Action Handlers (YouTube Music cho `media_play`, Google Maps cho `navigation_start`, Native Call/Camera/Volume/Settings/Overlay). `gradlew.bat assembleDebug` BUILD SUCCESSFUL.
@@ -210,8 +211,36 @@ Android (`com.youreyes.app`) xác nhận đây cùng hệ sinh thái "Your Eyes"
 tính năng `dispatch_kinh_action` bên `backend/` (billing) có bị trùng vai trò với hệ thống
 này hay không trước khi phát triển thêm cả hai song song.
 
-Nhánh làm việc: `ui/new` (tạo local, chưa push — chờ hoàn tất từng mục rồi push theo yêu
-cầu gốc của hohoangluan).
+- [x] **Rà soát toàn bộ (session 6, theo yêu cầu người dùng "kiểm tra 1 lần nữa")**:
+  đọc lại 26 file đã đổi, đối chiếu field JSON với schema backend. Tìm và sửa 1 race
+  condition thật trong `PreferencesViewModel`: bấm nhanh liên tiếp nhiều lựa chọn gửi
+  nhiều PUT chồng nhau, response về sai thứ tự có thể khiến server lưu sai giá trị
+  cuối cùng (UI vẫn đúng, nhưng load lại sẽ "revert" âm thầm) — sửa bằng debounce
+  400ms (`pendingSaveJob`, cancel job cũ trước khi delay+save job mới).
+  **Verify bằng backend thật, không chỉ đọc code**: dựng `docker compose` local
+  (port 8001, vì 8000 bị 1 container khác trên máy chiếm), chạy `alembic upgrade
+  head`, rồi gọi trực tiếp toàn bộ endpoint mới bằng đúng token/field mà
+  `DeviceApiClient` gửi — `/auth/register`→`/otp/verify`→`/login`→`/logout`,
+  `GET`/`PUT /preferences`, `POST /support/tickets`, `POST /device/glasses/link`+
+  `/unlink` (kiểm cả idempotent, gọi 2 lần), `POST /device/register` — tất cả khớp
+  chính xác với response schema thật.
+- [x] **Thêm Spotify song song YouTube Music** cho `music_play` (quyết định người
+  dùng qua AskUserQuestion, 2026-08-21): ưu tiên Spotify nếu đã cài
+  (`isSpotifyInstalled`, cần khai báo `<package>` trong `AndroidManifest.xml`
+  `<queries>` do giới hạn package visibility Android 11+), fallback YouTube Music
+  nếu không. Spotify không có endpoint intent "phát 1 bài qua tìm kiếm" như
+  `INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH` của YouTube Music, nên chỉ mở tới màn hình
+  tìm kiếm (`https://open.spotify.com/search/<query>`) rồi dùng lại đúng cơ chế
+  "nudge" qua Media Session sẵn có (`pressPlayOnActiveSession`, nay nhận thêm tham số
+  `preferredPackage`) — không đảm bảo tự phát 100% hands-free như YouTube Music.
+  Đường đáng tin cậy hơn (Spotify App Remote SDK) cần Client ID từ Spotify Developer
+  Dashboard của team — chưa làm, chờ nếu cần. `music_stop`/`music_volume` không đổi
+  (đã provider-agnostic từ trước, dùng `AudioManager` thuần). Không thêm test JVM cho
+  `isSpotifyInstalled` — cần `PackageManager` thật, nhất quán với toàn bộ phần
+  context-dependent khác của `ActionRegistry` (không có Robolectric trong repo này).
+
+Nhánh làm việc: `ui/vphoa` (tạo local, chưa push — chờ hohoangluan thêm `Bong142D`
+làm collaborator vào `hohoangluan/app-demo-backend`, hiện push bị 403).
 
 ### P6 quality-gate evidence (bảng riêng — bảng evidence gốc bên dưới có lỗi encoding cũ, không sửa để tránh hỏng thêm)
 
@@ -225,6 +254,9 @@ cầu gốc của hohoangluan).
 | 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint, số lượng warning mỗi category không đổi so với lần chạy trước (không category mới); `assembleDebug` BUILD SUCCESSFUL |
 | 2026-08-19 | P6 Support + Glasses Unlink (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `SupportUiStateTest` 6/6 mới, `GlassesLinkUiStateTest` 6/6 (3 test cũ + 3 test `canUnlink` mới), toàn bộ suite BUILD SUCCESSFUL |
 | 2026-08-19 | P6 Support + Glasses Unlink (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 5→6, cùng category cosmetic có sẵn); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `docker compose -f infra/compose.yaml --env-file .env up -d` + `alembic upgrade head` (local, port 8001) | Pass — 7 bảng đúng như migration, `/health/live` và `/health/ready` đều `ok` |
+| 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | curl trực tiếp toàn bộ endpoint mới (auth, preferences, support, glasses link/unlink, device register) bằng đúng field Kotlin gửi | Pass tất cả — response khớp chính xác schema; unlink lần 2 đúng `unlinked:false` (idempotent) |
+| 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 48/48 test (toàn repo), 0 lỗi lint, 0 warning compiler (dọn 1 elvis-operator dư sau khi sửa); `assembleDebug` BUILD SUCCESSFUL |
 
 Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
 `.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential

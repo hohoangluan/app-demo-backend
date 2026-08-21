@@ -616,6 +616,34 @@ private const val YOUTUBE_MUSIC_PACKAGE = "com.google.android.apps.youtube.music
 private const val YOUTUBE_MUSIC_BROWSER_SERVICE = "com.google.android.apps.youtube.music.mediabrowser.MusicBrowserService"
 private const val YT_MUSIC_BROWSER_TIMEOUT_MS = 8_000L
 
+private const val SPOTIFY_PACKAGE = "com.spotify.music"
+
+/** True when Spotify is installed. Requires the `<package>` entry in AndroidManifest.xml's `<queries>` (Android 11+ package visibility) — without it this silently returns false even when Spotify is present. */
+private fun isSpotifyInstalled(context: Context): Boolean =
+    context.packageManager.getLaunchIntentForPackage(SPOTIFY_PACKAGE) != null
+
+/**
+ * Opens Spotify to a search for [song].
+ *
+ * Spotify has no equivalent of YouTube Music's `INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH`
+ * contract (that convention is Android/Google-media-app specific; Spotify doesn't
+ * implement it), so this only reaches the search results screen — same as YouTube
+ * Music's own bare search intent before [playViaYouTubeMusicBrowser]/
+ * [pressPlayOnActiveSession] were added. [pressPlayOnActiveSession]'s media-session
+ * nudge (used as [MusicPlayHandler]'s retry loop either way) is what actually starts
+ * playback; there is no Spotify-specific equivalent of the MediaBrowser bind used for
+ * YouTube Music, since Spotify's browse service isn't public API the way YouTube
+ * Music's is.
+ */
+private fun openInSpotify(context: Context, song: String) {
+    val uri = Uri.parse("https://open.spotify.com/search/${Uri.encode(song)}")
+    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+        setPackage(SPOTIFY_PACKAGE)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    launchUiIntent(context, intent, "Dang mo Spotify", song)
+}
+
 /**
  * INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH only queues the track paused (confirmed
  * on-device). YouTube Music's own MediaBrowserService is the real, public,
@@ -696,7 +724,13 @@ private const val PLAY_NUDGE_INTERVAL_MS = 1_500L
 private fun hasNotificationAccess(context: Context): Boolean =
     NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
 
-private fun pressPlayOnActiveSession(context: Context, song: String, title: String, artist: String): Boolean {
+private fun pressPlayOnActiveSession(
+    context: Context,
+    song: String,
+    title: String,
+    artist: String,
+    preferredPackage: String = YOUTUBE_MUSIC_PACKAGE,
+): Boolean {
     val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
         ?: return false
     val listener = ComponentName(context, MediaControlListenerService::class.java)
@@ -708,7 +742,9 @@ private fun pressPlayOnActiveSession(context: Context, song: String, title: Stri
         return false
     }
 
-    val controller = sessions.firstOrNull { it.packageName == YOUTUBE_MUSIC_PACKAGE }
+    // Prefer whichever provider this play attempt actually targeted (Spotify or
+    // YouTube Music); fall back to any other active session as a last resort.
+    val controller = sessions.firstOrNull { it.packageName == preferredPackage }
         ?: sessions.firstOrNull()
         ?: return false
 
@@ -773,6 +809,9 @@ class MusicPlayHandler : ActionHandler {
             val song = json.optString("song", "Unknown")
             val requestedVolume = if (json.has("volume")) json.optInt("volume", 60).coerceIn(0, 100) else 60
             val (title, artist) = parseSongQuery(song)
+            // Tracked across the context!=null block below and reused for the result's
+            // track_id prefix, so isSpotifyInstalled() is only ever evaluated once.
+            var targetPackage: String? = null
 
             if (context != null) {
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -785,18 +824,28 @@ class MusicPlayHandler : ActionHandler {
                 val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (requestedVolume * maxVol) / 100, 0)
 
-                openInYouTubeMusic(context, song, title, artist)
-                playViaYouTubeMusicBrowser(context, song, title, artist)
+                // Prefer Spotify when it's installed (per product decision, 2026-08-21),
+                // falling back to the existing YouTube Music integration otherwise —
+                // this branch is the only thing that changed; music_stop/music_volume
+                // already worked provider-agnostically via plain AudioManager calls.
+                targetPackage = if (isSpotifyInstalled(context)) {
+                    openInSpotify(context, song)
+                    SPOTIFY_PACKAGE
+                } else {
+                    openInYouTubeMusic(context, song, title, artist)
+                    playViaYouTubeMusicBrowser(context, song, title, artist)
+                    YOUTUBE_MUSIC_PACKAGE
+                }
 
                 // The session does not exist yet when the intent returns, so press
                 // play on a timer rather than once: whichever attempt lands after
-                // YouTube Music publishes its session is the one that starts audio.
+                // the target app publishes its session is the one that starts audio.
                 val started = awaitMusicActive(
                     audioManager,
                     expected = true,
                     timeoutMs = PLAYBACK_SETTLE_TIMEOUT_MS,
                     nudge = {
-                        if (!pressPlayOnActiveSession(context, song, title, artist)) {
+                        if (!pressPlayOnActiveSession(context, song, title, artist, targetPackage)) {
                             audioManager.dispatchMediaKeyEvent(
                                 KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
                             )
@@ -813,19 +862,21 @@ class MusicPlayHandler : ActionHandler {
                     } else {
                         " (grant this app notification access so it can press play)"
                     }
+                    val providerLabel = if (targetPackage == SPOTIFY_PACKAGE) "Spotify" else "YouTube Music"
                     return ActionExecutionResult.Error(
                         ReportErrorPayload(
                             "PLAYBACK_FAILED",
-                            "Opened YouTube Music for '$song' but no audio started within " +
+                            "Opened $providerLabel for '$song' but no audio started within " +
                                 "${PLAYBACK_SETTLE_TIMEOUT_MS / 1000}s$hint",
                         )
                     )
                 }
             }
 
+            val trackIdPrefix = if (targetPackage == SPOTIFY_PACKAGE) "spotify" else "yt-music"
             ActionExecutionResult.Success(
                 mapOf(
-                    "track_id" to "yt-music-${UUID.randomUUID().toString().take(8)}",
+                    "track_id" to "$trackIdPrefix-${UUID.randomUUID().toString().take(8)}",
                     "title" to title,
                     "artist" to artist,
                     "playback_state" to "playing",
