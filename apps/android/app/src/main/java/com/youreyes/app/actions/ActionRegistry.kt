@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -1584,18 +1585,43 @@ class QuotesSpeakHandler : ActionHandler {
     }
 }
 
+/**
+ * Display-name prefix every camera_capture photo is saved under, so the Album screen
+ * ([com.youreyes.app.ui.album.AlbumViewModel]) can filter MediaStore to just
+ * glasses-triggered captures instead of the phone's entire camera roll. Also makes
+ * every capture a MediaStore row this app's own `ContentResolver.insert()` created, so
+ * Album can read them back without any READ_MEDIA_IMAGES/READ_MEDIA_VIDEO runtime
+ * permission — Android's Scoped Storage always lets an app see media rows it owns.
+ */
+const val CAMERA_CAPTURE_NAME_PREFIX = "YourEyes_"
+
+/** Inserts a pending MediaStore row for a new photo, or null if the insert itself failed. */
+private fun createCaptureOutputUri(context: Context): Uri? {
+    val values = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "$CAMERA_CAPTURE_NAME_PREFIX${System.currentTimeMillis()}.jpg")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+    }
+    return context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+}
+
 class CameraCaptureHandler : ActionHandler {
     override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val mode = json.optString("mode", "photo")
             if (context != null) {
+                val outputUri = createCaptureOutputUri(context)
                 val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    if (outputUri != null) {
+                        putExtra(MediaStore.EXTRA_OUTPUT, outputUri)
+                    }
                 }
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    context.startActivity(intent)
-                }
+                // Was a raw startActivity() before — Android silently drops that when
+                // called from this background FCM-receiver/service thread, the same
+                // class of bug launchUiIntent already exists to fix for every other
+                // action.
+                launchUiIntent(context, intent, "Mo camera", "Chup anh qua kinh")
             }
             ActionExecutionResult.Success(mapOf("mode" to mode, "capture_status" to "captured"))
         }.getOrElse {

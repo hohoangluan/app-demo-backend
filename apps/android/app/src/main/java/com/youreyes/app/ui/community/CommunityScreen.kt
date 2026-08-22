@@ -24,18 +24,17 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.youreyes.app.ui.components.RowCard
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBlue
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
-import com.youreyes.app.ui.theme.YourEyesTeal
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.accentTextColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
 fun CommunityScreen(
@@ -49,28 +48,25 @@ fun CommunityScreen(
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(22.dp),
-                    spotColor = YourEyesShadow,
+                    spotColor = shadowColor,
                 ),
             shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Text(
                     text = "Cộng Đồng Your Eyes",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Black,
-                        color = YourEyesInk,
-                        fontSize = 19.sp,
+                        color = inkColor,
                     ),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Mạng lưới kết nối, chia sẻ kinh nghiệm và hỗ trợ địa điểm rảnh tay cho cộng đồng người khiếm thị Việt Nam.",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = YourEyesMuted,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        color = mutedColor,
                     ),
                 )
             }
@@ -82,28 +78,28 @@ fun CommunityScreen(
             title = "Bản đồ tuyến đường rảnh tay",
             subtitle = "Danh sách vỉa hè, xe buýt và công viên đã được xác thực an toàn bởi cộng đồng.",
             icon = Icons.Default.LocationOn,
-            iconTone = YourEyesCyan,
+            iconTone = accentColor,
         )
 
         RowCard(
             title = "Chia sẻ kinh nghiệm sử dụng Kính",
             subtitle = "Mẹo sử dụng các lệnh đọc sách, nhận diện vật thể và đặt xe nhanh.",
             icon = Icons.Default.Share,
-            iconTone = YourEyesTeal,
+            iconTone = accentTextColor,
         )
 
         RowCard(
             title = "Câu lạc bộ Âm nhạc & Sách nói",
             subtitle = "Giao lưu, chia sẻ danh sách phát nhạc và tủ sách nói trợ năng.",
             icon = Icons.Default.Favorite,
-            iconTone = YourEyesBlue,
+            iconTone = accentTextColor,
         )
 
         RowCard(
             title = "Sự kiện & Buổi gặp mặt hàng tháng",
             subtitle = "Chương trình trải nghiệm công nghệ hỗ trợ người khiếm thị.",
             icon = Icons.Default.DateRange,
-            iconTone = YourEyesSuccess,
+            iconTone = successColor,
         )
     }
 }

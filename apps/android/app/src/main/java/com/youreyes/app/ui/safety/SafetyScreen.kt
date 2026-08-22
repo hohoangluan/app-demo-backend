@@ -38,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.youreyes.app.fcm.FcmPushReceiver
@@ -48,14 +47,13 @@ import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
 import com.youreyes.app.ui.components.SosButton
 import com.youreyes.app.ui.overview.OverviewViewModel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
-import com.youreyes.app.ui.theme.YourEyesTeal
+import com.youreyes.app.ui.theme.accentTextColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
 fun SafetyScreen(
@@ -122,11 +120,11 @@ fun SafetyScreen(
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(22.dp),
-                    spotColor = YourEyesShadow,
+                    spotColor = shadowColor,
                 ),
             shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -136,15 +134,13 @@ fun SafetyScreen(
                     text = "Báo Động Khẩn Cấp SOS",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Black,
-                        color = YourEyesInk,
-                        fontSize = 18.sp,
+                        color = inkColor,
                     ),
                 )
                 Text(
                     text = "Hệ thống bảo vệ an toàn rảnh tay 24/7",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = YourEyesMuted,
-                        fontSize = 12.sp,
+                        color = mutedColor,
                     ),
                     modifier = Modifier.padding(top = 2.dp, bottom = 18.dp),
                 )
@@ -161,8 +157,8 @@ fun SafetyScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -188,14 +184,14 @@ fun SafetyScreen(
                 title = "Gọi Khẩn Cấp Thật Ngay Tức Thì",
                 subtitle = "SĐT: $emergencyPhone (Nhấn để gọi điện trực tiếp)",
                 icon = Icons.Default.Person,
-                iconTone = YourEyesDanger,
+                iconTone = dangerColor,
                 onClick = { triggerEmergencyCall() },
                 trailing = {
                     Text(
                         text = "Gọi ngay",
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = YourEyesDanger,
+                            color = dangerColor,
                         )
                     )
                 }
@@ -208,7 +204,7 @@ fun SafetyScreen(
             title = "Báo động 3-Tap rảnh tay",
             subtitle = "Bấm nhanh nút SOS 3 lần trong 2 giây để ngay lập tức kích hoạt cuộc gọi khẩn cấp.",
             icon = Icons.Default.Info,
-            iconTone = YourEyesTeal,
+            iconTone = accentTextColor,
         )
     }
 }

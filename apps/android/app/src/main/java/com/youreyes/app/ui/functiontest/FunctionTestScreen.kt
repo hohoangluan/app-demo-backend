@@ -24,20 +24,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.youreyes.app.ui.components.GradientButton
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun FunctionTestRoute(modifier: Modifier = Modifier) {
+fun FunctionTestRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: FunctionTestViewModel = viewModel()
     val rows by viewModel.rows.collectAsState()
     FunctionTestScreen(
         rows = rows,
         onParamsChange = viewModel::onParamsChange,
         onRun = viewModel::runAction,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -48,8 +50,9 @@ fun FunctionTestScreen(
     onParamsChange: (String, String) -> Unit,
     onRun: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Developer Action Testing") {
+    ScreenShell(modifier = modifier, title = "Kiểm thử action (nội bộ)", onBack = onBack) {
         SectionLabel(text = "Kiểm Thử 9 Native Handlers")
 
         rows.forEach { row ->
@@ -70,11 +73,11 @@ private fun FunctionTestCard(
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(16.dp),
-                spotColor = YourEyesShadow,
+                spotColor = shadowColor,
             ),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -82,7 +85,7 @@ private fun FunctionTestCard(
         ) {
             Text(
                 text = "${row.label} (${row.action})",
-                style = MaterialTheme.typography.titleSmall.copy(color = YourEyesInk),
+                style = MaterialTheme.typography.titleSmall.copy(color = inkColor),
             )
             OutlinedTextField(
                 value = row.paramsJson,
@@ -99,7 +102,7 @@ private fun FunctionTestCard(
             row.resultText?.let { text ->
                 Text(
                     text = text,
-                    color = if (row.isError) YourEyesDanger else YourEyesSuccess,
+                    color = if (row.isError) dangerColor else successColor,
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 )
             }

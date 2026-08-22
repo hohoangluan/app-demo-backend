@@ -46,6 +46,18 @@ class OverviewViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    /**
+     * Re-reads `user_id` from SharedPreferences. Call when this screen is re-entered:
+     * [com.youreyes.app.ui.auth.AuthViewModel] may have overwritten it with the real
+     * logged-in `public_user_id` after this ViewModel's own `loadInitialState()` ran
+     * (that constructor call happens once and is cached for the Activity's lifetime,
+     * so it would otherwise miss a login that happened on a different tab).
+     */
+    fun refreshUserId() {
+        val saved = prefs.getString(FcmPushReceiver.KEY_USER_ID, null) ?: return
+        _uiState.update { if (it.userId != saved) it.copy(userId = saved) else it }
+    }
+
     fun onServerUrlChange(url: String) = _uiState.update { it.copy(serverUrl = url) }
     fun onUserIdChange(id: String)     = _uiState.update { it.copy(userId = id) }
     fun onDeviceIdChange(id: String)   = _uiState.update { it.copy(deviceId = id) }

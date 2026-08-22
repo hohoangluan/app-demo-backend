@@ -86,6 +86,19 @@ dependencies {
     // Coroutines for background registration call
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
+    // Loads photo/video thumbnails from MediaStore content:// URIs for the Album screen
+    // (no network fetcher needed — Coil reads local content:// URIs natively).
+    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
+
+    // (Be Vietnam Pro is bundled in res/font — no downloadable-font provider needed)
+
+    // Navigation with a real back stack — replaces the selectedTab:Int switch, so
+    // the system Back button returns to the previous screen instead of exiting.
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+
+    // edit {} / SharedPreferences KTX used by ui/theme/DisplaySettings.kt
+    implementation("androidx.core:core-ktx:1.15.0")
+
     // Fused location provider required by the location/capability contract (T07/P8).
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
