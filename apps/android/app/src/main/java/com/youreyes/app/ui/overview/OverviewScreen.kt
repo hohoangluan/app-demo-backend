@@ -44,6 +44,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.sp
+import com.youreyes.app.R
+import androidx.compose.ui.graphics.ColorFilter
+import com.youreyes.app.ui.theme.isHighContrastMode
 import com.youreyes.app.ui.components.MiniStat
 import com.youreyes.app.ui.components.RowCard
 import com.youreyes.app.ui.components.ScreenShell
@@ -115,7 +122,7 @@ fun OverviewScreen(
                 modifier = Modifier.weight(1f),
             )
             FeatureChip(
-                label = "Voice Support",
+                label = "Hỗ trợ giọng nói",
                 icon = Icons.Default.Notifications,
                 tone = successColor,
                 modifier = Modifier.weight(1f),
@@ -208,13 +215,30 @@ private fun HeroBanner() {
             modifier = Modifier.padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = com.youreyes.app.R.drawable.your_eyes_logo),
-                contentDescription = "YOUR EYES",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            // The mark on transparency plus live text, rather than the full logo
+            // bitmap: that bitmap is drawn on white, so on the high-contrast
+            // ground it appeared as a white rectangle floating in the card. The
+            // wordmark also sits in near-black and would have vanished there.
+            // Written out as text, the name follows the theme, scales with "Cỡ
+            // chữ", and is something TalkBack can actually read.
+            Image(
+                painter = painterResource(id = R.drawable.your_eyes_mark_transparent),
+                contentDescription = null,
+                modifier = Modifier.height(64.dp),
+                contentScale = ContentScale.Fit,
+                // Flattened to a single accent colour in high contrast. The mark is
+                // drawn as overlapping translucent strokes, so on a near-black ground
+                // its pale arm reads as dark-on-dark and the shape breaks apart —
+                // the same reason the launcher icon kept a light ground.
+                colorFilter = if (isHighContrastMode) ColorFilter.tint(accentColor) else null,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "YOUR EYES",
+                style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 4.sp),
+                color = inkColor,
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -293,43 +317,38 @@ private fun DeviceStatusCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(
-                        text = "Kính Your Eyes",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            color = inkColor,
-                        ),
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (isRegistered) successColor else mutedColor)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isRegistered) "● Đã kết nối với backend" else "● Chưa kết nối",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (isRegistered) successColor else mutedColor,
-                            ),
-                        )
-                    }
-                }
+            // Stacked rather than title-left / pill-right. Side by side, the title
+            // takes the width it needs and the pill is squeezed into a column of
+            // single characters — which is exactly what happens at "Cỡ chữ: To",
+            // where every string is a third longer.
+            Text(
+                text = "Kính Your Eyes",
+                style = MaterialTheme.typography.titleMedium,
+                color = inkColor,
+            )
 
-                // "Serial" is the word on the invoice, not the word a wearer uses.
-                StatusPill(text = "Mã kính: $deviceId")
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(if (isRegistered) successColor else mutedColor)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isRegistered) "Đã kết nối" else "Chưa kết nối",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isRegistered) successColor else mutedColor,
+                )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // "Serial" is the word on the invoice, not the word a wearer uses.
+            StatusPill(text = "Mã kính: $deviceId")
 
             Spacer(modifier = Modifier.height(10.dp))
 
