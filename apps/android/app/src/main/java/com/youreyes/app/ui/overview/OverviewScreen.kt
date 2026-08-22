@@ -48,8 +48,7 @@ import com.youreyes.app.ui.components.MiniStat
 import com.youreyes.app.ui.components.RowCard
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesButtonGradientEnd
-import com.youreyes.app.ui.theme.YourEyesButtonGradientStart
+import com.youreyes.app.ui.components.StatusPill
 import com.youreyes.app.ui.theme.accentColor
 import com.youreyes.app.ui.theme.accentTextColor
 import com.youreyes.app.ui.theme.borderColor
@@ -130,31 +129,6 @@ fun OverviewScreen(
             isRegistered = state.isRegistered,
             onConfigureClick = onNavigateToProfile,
         )
-
-        // Mini Stats Summary
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MiniStat(
-                label = "Tài khoản",
-                value = state.userId,
-                tone = accentColor,
-                modifier = Modifier.weight(1f),
-            )
-            MiniStat(
-                label = "Trạng thái",
-                value = if (state.isRegistered) "Sẵn sàng" else "Chưa nối",
-                tone = if (state.isRegistered) successColor else accentTextColor,
-                modifier = Modifier.weight(1f),
-            )
-            MiniStat(
-                label = "Bảo mật",
-                value = "OK",
-                tone = successColor,
-                modifier = Modifier.weight(1f),
-            )
-        }
 
         SectionLabel(text = "Trợ lý AI Kính Thông Minh")
 
@@ -353,24 +327,8 @@ private fun DeviceStatusCard(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(YourEyesButtonGradientStart, YourEyesButtonGradientEnd)
-                            )
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = "Serial: $deviceId",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                        ),
-                    )
-                }
+                // "Serial" is the word on the invoice, not the word a wearer uses.
+                StatusPill(text = "Mã kính: $deviceId")
             }
 
             Spacer(modifier = Modifier.height(10.dp))

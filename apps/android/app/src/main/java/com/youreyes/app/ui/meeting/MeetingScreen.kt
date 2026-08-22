@@ -55,7 +55,7 @@ fun MeetingScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Biên Bản Họp", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Biên bản họp", onBack = onBack) {
         DemoBanner("Bản demo — chưa nối AI ghi âm/phiên âm thật. Nội dung transcript bên dưới là câu mẫu giả lập theo thời gian.")
 
         Card(

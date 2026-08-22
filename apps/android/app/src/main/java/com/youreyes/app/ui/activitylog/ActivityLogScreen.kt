@@ -52,7 +52,7 @@ fun ActivityLogScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Lịch Sử Hoạt Động", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Lịch sử hoạt động", onBack = onBack) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

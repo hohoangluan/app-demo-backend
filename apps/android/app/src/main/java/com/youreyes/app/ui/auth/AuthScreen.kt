@@ -71,7 +71,7 @@ fun AuthScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Tài Khoản", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Tài khoản", onBack = onBack) {
         when {
             state.isLoggedIn -> LoggedInCard(state, onLogout)
             state.step == AuthStep.OTP -> OtpCard(state, onOtpCodeChange, onSubmitOtp)

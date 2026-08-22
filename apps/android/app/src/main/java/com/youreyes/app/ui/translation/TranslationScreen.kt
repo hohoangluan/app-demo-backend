@@ -56,7 +56,7 @@ fun TranslationScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Dịch Thuật", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Dịch thuật", onBack = onBack) {
         DemoBanner("Bản demo — chưa nối AI dịch thuật thật. Bấm micro sẽ hiện câu mẫu giả lập.")
 
         Card(

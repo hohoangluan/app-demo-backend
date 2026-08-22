@@ -52,7 +52,7 @@ fun FunctionTestScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Developer Action Testing", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Kiểm thử action (nội bộ)", onBack = onBack) {
         SectionLabel(text = "Kiểm Thử 9 Native Handlers")
 
         rows.forEach { row ->

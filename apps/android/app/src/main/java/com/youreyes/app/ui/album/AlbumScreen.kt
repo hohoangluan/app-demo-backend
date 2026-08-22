@@ -65,7 +65,7 @@ fun AlbumScreen(
     val context = LocalContext.current
     // scrollable=false: a LazyVerticalGrid needs a bounded-height parent, which a
     // scrolling Column can't give it (unbounded height -> crash).
-    ScreenShell(modifier = modifier, title = "Album Ảnh & Video", scrollable = false, onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Ảnh và video", scrollable = false, onBack = onBack) {
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.CenterEnd,

@@ -65,7 +65,7 @@ fun SupportScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Hỗ Trợ & Góp Ý", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Hỗ trợ và góp ý", onBack = onBack) {
         if (!state.isLoggedIn) {
             Text(
                 text = "Đăng nhập ở mục \"Tài Khoản Đăng Nhập\" trong Hồ sơ để gửi yêu cầu hỗ trợ.",

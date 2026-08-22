@@ -78,7 +78,7 @@ val guideSections = listOf(
 
 @Composable
 fun UserGuideScreen(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
-    ScreenShell(modifier = modifier, title = "Hướng Dẫn Sử Dụng", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Hướng dẫn sử dụng", onBack = onBack) {
         guideSections.forEach { section -> GuideCard(section) }
     }
 }

@@ -75,7 +75,7 @@ fun GlassesLinkScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Pairing Kính", onBack = onBack) {
+    ScreenShell(modifier = modifier, title = "Kính Your Eyes", onBack = onBack) {
         // Pairing Hero Banner
         Card(
             modifier = Modifier

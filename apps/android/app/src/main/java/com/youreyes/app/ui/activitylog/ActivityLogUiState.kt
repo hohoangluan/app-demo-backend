@@ -28,23 +28,29 @@ data class ActivityLogUiState(
         get() = rows.isEmpty() && !isLoading
 }
 
-/** Vietnamese label per contract action (project_context.md §6); unknown actions keep their raw name rather than being hidden. */
+/**
+ * Vietnamese label per contract action (project_context.md §6); unknown actions keep
+ * their raw name rather than being hidden.
+ *
+ * No emoji. TalkBack reads one aloud by name — "automobile", "loudspeaker" — before
+ * the label itself, on every row of a screen that is nothing but rows.
+ */
 private val actionLabels: Map<String, String> = mapOf(
-    ActionType.RIDE_QUOTE.value to "🚖 Báo giá đặt xe",
-    ActionType.RIDE_CONFIRM.value to "🚖 Xác nhận đặt xe",
-    ActionType.MUSIC_PLAY.value to "🎵 Phát nhạc",
-    ActionType.MUSIC_STOP.value to "🎵 Dừng nhạc",
-    ActionType.MUSIC_VOLUME.value to "🔊 Chỉnh âm lượng",
-    ActionType.NAVIGATION_START.value to "🗺️ Bắt đầu điều hướng",
-    ActionType.NAVIGATION_STOP.value to "🗺️ Dừng điều hướng",
-    ActionType.EMERGENCY_CALL.value to "🆘 Gọi khẩn cấp",
-    ActionType.CONTACT_CALL.value to "📞 Gọi liên hệ",
-    ActionType.LOCATION_GET.value to "📍 Lấy vị trí hiện tại",
-    ActionType.QUOTES_SPEAK.value to "💬 Đọc câu nói",
-    ActionType.MEDIA_PLAY.value to "🎵 Phát nhạc (demo)",
-    ActionType.CAMERA_CAPTURE.value to "📷 Chụp ảnh",
-    ActionType.DISPLAY_SHOW.value to "🖥️ Hiển thị thông báo",
-    ActionType.SYSTEM_SETTINGS.value to "⚙️ Mở cài đặt hệ thống",
+    ActionType.RIDE_QUOTE.value to "Báo giá đặt xe",
+    ActionType.RIDE_CONFIRM.value to "Xác nhận đặt xe",
+    ActionType.MUSIC_PLAY.value to "Phát nhạc",
+    ActionType.MUSIC_STOP.value to "Dừng nhạc",
+    ActionType.MUSIC_VOLUME.value to "Chỉnh âm lượng",
+    ActionType.NAVIGATION_START.value to "Bắt đầu điều hướng",
+    ActionType.NAVIGATION_STOP.value to "Dừng điều hướng",
+    ActionType.EMERGENCY_CALL.value to "Gọi khẩn cấp",
+    ActionType.CONTACT_CALL.value to "Gọi liên hệ",
+    ActionType.LOCATION_GET.value to "Lấy vị trí hiện tại",
+    ActionType.QUOTES_SPEAK.value to "Đọc câu nói",
+    ActionType.MEDIA_PLAY.value to "Phát nhạc (demo)",
+    ActionType.CAMERA_CAPTURE.value to "Chụp ảnh",
+    ActionType.DISPLAY_SHOW.value to "Hiển thị thông báo",
+    ActionType.SYSTEM_SETTINGS.value to "Mở cài đặt hệ thống",
 )
 
 /**
@@ -61,25 +67,73 @@ private fun parseStatus(status: String): ActivityLogStatus = when (status) {
 }
 
 /**
- * Compact single-line rendering of a result/error JSON object's top-level fields.
- * Result shapes differ per action (ride vs music vs navigation...), so this stays
- * generic instead of hand-mapping 15 action-specific summaries. Bounded so one
- * unusually large payload cannot blow out the row's layout.
+ * Turns a result payload into a sentence a person would say.
+ *
+ * This previously printed the JSON object's top-level fields as `key: value`
+ * pairs, so the screen showed a user things like
+ * `track_id: 4f2a..., playback_state: playing, captured_at: 1755...`. Result
+ * shapes do differ per action, but their field names are fixed by
+ * `apps/backend/src/app/schemas/service_results.py`, so they can be spoken.
+ *
+ * Fields that carry no meaning for the person who ran the command — ids,
+ * timestamps, retry counters, currency codes — are dropped rather than
+ * translated. Three fields is the cap: this is a log row, not a receipt.
  */
-private fun summarizeJson(json: String?, maxLength: Int = 140): String? {
+private val resultFieldLabels: List<Pair<String, String>> = listOf(
+    "address" to "Địa chỉ",
+    "destination" to "Điểm đến",
+    "contact_name" to "Liên hệ",
+    "contact" to "Liên hệ",
+    "phone_number" to "Số gọi",
+    "title" to "Bài hát",
+    "artist" to "Ca sĩ",
+    "eta_minutes" to "Dự kiến",
+    "price_estimate" to "Giá",
+    "amount" to "Số tiền",
+    "travel_mode" to "Phương tiện",
+    "volume" to "Âm lượng",
+    "level" to "Âm lượng",
+    "ride_status" to "Chuyến xe",
+    "playback_state" to "Nhạc",
+    "navigation_state" to "Dẫn đường",
+    "call_state" to "Cuộc gọi",
+    "emergency_state" to "Khẩn cấp",
+    "volume_state" to "Âm lượng",
+    "answered" to "Bắt máy",
+    "sms_sent" to "Tin nhắn",
+)
+
+/** State values arrive as API enums; these are what they are called out loud. */
+private val stateWords: Map<String, String> = mapOf(
+    "playing" to "đang phát", "paused" to "tạm dừng", "stopped" to "đã dừng",
+    "started" to "đã bắt đầu", "navigating" to "đang dẫn đường",
+    "ringing" to "đang đổ chuông", "answered" to "đã bắt máy",
+    "ended" to "đã kết thúc", "failed" to "thất bại",
+    "requested" to "đã gửi yêu cầu", "confirmed" to "đã xác nhận",
+    "cancelled" to "đã huỷ", "completed" to "hoàn tất",
+    "quoted" to "đã báo giá", "triggered" to "đã kích hoạt",
+    "muted" to "đã tắt tiếng", "changed" to "đã thay đổi",
+    "true" to "có", "false" to "không",
+)
+
+private fun speak(key: String, raw: String): String = when (key) {
+    "eta_minutes" -> "$raw phút"
+    "volume", "level" -> "$raw%"
+    else -> stateWords[raw.lowercase()] ?: raw
+}
+
+private fun describeResult(json: String?, maxFields: Int = 3): String? {
     if (json.isNullOrBlank()) return null
-    return try {
-        val obj = JSONObject(json)
-        val keys = obj.keys()
-        val parts = mutableListOf<String>()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            parts.add("$key: ${obj.get(key)}")
-        }
-        parts.joinToString(", ").let { if (it.length > maxLength) it.take(maxLength) + "…" else it }
+    val obj = try {
+        JSONObject(json)
     } catch (_: JSONException) {
-        json.take(maxLength)
+        return null
     }
+    val parts = resultFieldLabels.mapNotNull { (key, label) ->
+        val raw = obj.opt(key)?.toString()?.trim()
+        if (raw.isNullOrBlank() || raw == "null") null else "$label: ${speak(key, raw)}"
+    }
+    return parts.take(maxFields).joinToString(" · ").ifBlank { null }
 }
 
 /** Pulls just the human-readable `message` out of an error payload, when present. */
@@ -100,11 +154,11 @@ fun CommandRecord.toActivityLogRow(): ActivityLogRow {
     val status = parseStatus(this.status)
     val summary = when (status) {
         ActivityLogStatus.FAILED ->
-            errorMessage(errorJson) ?: summarizeJson(errorJson) ?: "Không rõ nguyên nhân lỗi"
+            errorMessage(errorJson) ?: "Lệnh không thực hiện được. Thử lại lần nữa."
         ActivityLogStatus.SUCCEEDED ->
-            summarizeJson(resultJson) ?: "Hoàn tất, không có dữ liệu kết quả"
+            describeResult(resultJson) ?: "Đã thực hiện xong."
         ActivityLogStatus.PROCESSING ->
-            "Đang chờ kết quả từ thiết bị..."
+            "Đang chờ kết quả từ điện thoại."
     }
     // Local instance (not a shared top-level val): SimpleDateFormat is not thread-safe,
     // and this can run per-row from a background dispatcher (see CommandDispatcher's
