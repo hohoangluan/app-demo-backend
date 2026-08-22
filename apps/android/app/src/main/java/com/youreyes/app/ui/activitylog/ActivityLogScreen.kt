@@ -29,16 +29,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun ActivityLogRoute(modifier: Modifier = Modifier) {
+fun ActivityLogRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: ActivityLogViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     ActivityLogScreen(state = state, onRefresh = viewModel::refresh, modifier = modifier)
@@ -49,8 +50,9 @@ fun ActivityLogScreen(
     state: ActivityLogUiState,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Lịch Sử Hoạt Động") {
+    ScreenShell(modifier = modifier, title = "Lịch Sử Hoạt Động", onBack = onBack) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -58,7 +60,7 @@ fun ActivityLogScreen(
         ) {
             SectionLabel(text = "Các Lệnh Kính Đã Gửi Tới Điện Thoại")
             IconButton(onClick = onRefresh) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Làm mới", tint = YourEyesCyan)
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Làm mới", tint = accentColor)
             }
         }
 
@@ -75,8 +77,8 @@ private fun LoadingCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Row(
             modifier = Modifier
@@ -84,7 +86,7 @@ private fun LoadingCard() {
                 .padding(20.dp),
             horizontalArrangement = Arrangement.Center,
         ) {
-            CircularProgressIndicator(color = YourEyesCyan)
+            CircularProgressIndicator(color = accentColor)
         }
     }
 }
@@ -94,24 +96,21 @@ private fun EmptyCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = "Chưa có hoạt động nào",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = YourEyesInk,
-                    fontSize = 14.sp,
+                    color = inkColor,
                 ),
             )
             Text(
                 text = "Các lệnh kính gửi tới điện thoại (đặt xe, phát nhạc, điều hướng, khẩn cấp, gọi liên hệ...) sẽ xuất hiện tại đây.",
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = YourEyesMuted,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
+                    color = mutedColor,
                 ),
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -122,18 +121,18 @@ private fun EmptyCard() {
 @Composable
 private fun ActivityLogItemCard(row: ActivityLogRow) {
     val (statusText, statusColor) = when (row.status) {
-        ActivityLogStatus.SUCCEEDED -> "Thành công" to YourEyesSuccess
-        ActivityLogStatus.FAILED -> "Thất bại" to YourEyesDanger
-        ActivityLogStatus.PROCESSING -> "Đang xử lý" to YourEyesMuted
+        ActivityLogStatus.SUCCEEDED -> "Thành công" to successColor
+        ActivityLogStatus.FAILED -> "Thất bại" to dangerColor
+        ActivityLogStatus.PROCESSING -> "Đang xử lý" to mutedColor
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 3.dp, shape = RoundedCornerShape(16.dp), spotColor = YourEyesShadow),
+            .shadow(elevation = 3.dp, shape = RoundedCornerShape(16.dp), spotColor = shadowColor),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -148,8 +147,7 @@ private fun ActivityLogItemCard(row: ActivityLogRow) {
                     text = row.actionLabel,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = YourEyesInk,
-                        fontSize = 14.sp,
+                        color = inkColor,
                     ),
                     modifier = Modifier.weight(1f),
                 )
@@ -158,20 +156,17 @@ private fun ActivityLogItemCard(row: ActivityLogRow) {
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Black,
                         color = statusColor,
-                        fontSize = 11.sp,
                     ),
                 )
             }
             Text(
                 text = row.receivedAtText,
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 11.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 11.sp),
             )
             Text(
                 text = row.summary,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = YourEyesMuted,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
+                    color = mutedColor,
                 ),
             )
         }

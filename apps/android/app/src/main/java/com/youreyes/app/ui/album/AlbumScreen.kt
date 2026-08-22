@@ -41,13 +41,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun AlbumRoute(modifier: Modifier = Modifier) {
+fun AlbumRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: AlbumViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(Unit) { viewModel.refresh() }
@@ -59,18 +60,19 @@ fun AlbumScreen(
     state: AlbumUiState,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     // scrollable=false: a LazyVerticalGrid needs a bounded-height parent, which a
     // scrolling Column can't give it (unbounded height -> crash).
-    ScreenShell(modifier = modifier, title = "Album Ảnh & Video", scrollable = false) {
+    ScreenShell(modifier = modifier, title = "Album Ảnh & Video", scrollable = false, onBack = onBack) {
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.CenterEnd,
         ) {
             SectionLabel(text = "Ảnh chụp qua kính")
             IconButton(onClick = onRefresh, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Làm mới", tint = YourEyesCyan)
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Làm mới", tint = accentColor)
             }
         }
 
@@ -103,7 +105,7 @@ private fun AlbumThumbnail(item: AlbumItem, onClick: () -> Unit) {
         modifier = Modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
+            .background(surfaceColor)
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
@@ -119,11 +121,11 @@ private fun LoadingCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = YourEyesCyan)
+            CircularProgressIndicator(color = accentColor)
         }
     }
 }
@@ -133,19 +135,19 @@ private fun EmptyCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Icon(imageVector = Icons.Default.Photo, contentDescription = null, tint = YourEyesMuted)
+            Icon(imageVector = Icons.Default.Photo, contentDescription = null, tint = mutedColor)
             Text(
                 text = "Chưa có ảnh nào",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
                 modifier = Modifier.padding(top = 8.dp),
             )
             Text(
                 text = "Ảnh chụp qua lệnh của kính (camera_capture) sẽ xuất hiện tại đây.",
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
                 modifier = Modifier.padding(top = 4.dp),
             )
         }

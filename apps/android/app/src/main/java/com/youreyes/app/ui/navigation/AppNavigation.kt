@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -167,16 +168,21 @@ private fun NavGraphBuilder.appDestinations(
         )
     }
 
-    composable(Routes.GLASSES) { GlassesLinkRoute(modifier = modifier) }
-    composable(Routes.ACTIVITY_LOG) { ActivityLogRoute(modifier = modifier) }
-    composable(Routes.AUTH) { AuthRoute(modifier = modifier) }
-    composable(Routes.SUPPORT) { SupportRoute(modifier = modifier) }
-    composable(Routes.ALBUM) { AlbumRoute(modifier = modifier) }
-    composable(Routes.GUIDE) { UserGuideScreen(modifier = modifier) }
-    composable(Routes.TRANSLATION) { TranslationRoute(modifier = modifier) }
-    composable(Routes.MEETING) { MeetingRoute(modifier = modifier) }
-    composable(Routes.DISPLAY) { DisplayRoute(modifier = modifier) }
-    composable(Routes.DEV_TEST) { FunctionTestRoute(modifier = modifier) }
+    // Pushed screens. Each gets a visible back control as well as the system
+    // one: the system gesture is invisible, and nothing on the screen tells a
+    // blind user it is there.
+    val back: () -> Unit = { navController.popBackStack() }
+
+    composable(Routes.GLASSES) { GlassesLinkRoute(modifier = modifier, onBack = back) }
+    composable(Routes.ACTIVITY_LOG) { ActivityLogRoute(modifier = modifier, onBack = back) }
+    composable(Routes.AUTH) { AuthRoute(modifier = modifier, onBack = back) }
+    composable(Routes.SUPPORT) { SupportRoute(modifier = modifier, onBack = back) }
+    composable(Routes.ALBUM) { AlbumRoute(modifier = modifier, onBack = back) }
+    composable(Routes.GUIDE) { UserGuideScreen(modifier = modifier, onBack = back) }
+    composable(Routes.TRANSLATION) { TranslationRoute(modifier = modifier, onBack = back) }
+    composable(Routes.MEETING) { MeetingRoute(modifier = modifier, onBack = back) }
+    composable(Routes.DISPLAY) { DisplayRoute(modifier = modifier, onBack = back) }
+    composable(Routes.DEV_TEST) { FunctionTestRoute(modifier = modifier, onBack = back) }
 }
 
 /**
@@ -193,12 +199,16 @@ private fun NavGraphBuilder.appDestinations(
 @Composable
 private fun AppBottomBar(navController: NavHostController, currentRoute: String?) {
     val colors = AppTheme.colors
+    // The bar grows with the text rather than clipping it. At "To", "Trang chủ"
+    // and "Cộng đồng" need two lines; a fixed-height bar would either cut them
+    // off or force the labels back down to a size the setting exists to avoid.
+    val scale = AppTheme.typeScale
 
     NavigationBar(
         containerColor = colors.surface,
         contentColor = colors.ink,
         tonalElevation = 8.dp,
-        modifier = Modifier.defaultMinSize(minHeight = 88.dp),
+        modifier = Modifier.defaultMinSize(minHeight = 88.dp * scale),
     ) {
         bottomDestinations.forEach { destination ->
             val isSelected = currentRoute == destination.route
@@ -236,6 +246,8 @@ private fun AppBottomBar(navController: NavHostController, currentRoute: String?
                         text = destination.label,
                         style = MaterialTheme.typography.labelMedium,
                         color = if (isSelected) colors.accentText else colors.inkSecondary,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
                     )
                 },
                 alwaysShowLabel = true,

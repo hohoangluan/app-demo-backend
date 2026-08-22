@@ -14,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
+import com.youreyes.app.ui.devmode.DeveloperMode
 import com.youreyes.app.ui.navigation.AppRoot
 import com.youreyes.app.ui.theme.AppDemoTheme
 import com.youreyes.app.ui.theme.DisplaySettings
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
         // Text size and contrast must be known before the first frame: a user who
         // needs the large scale should never see one frame of the small one.
         DisplaySettings.load(this)
+        DeveloperMode.load(this)
 
         // Request runtime permissions on launch so user just taps "Allow"
         requestAppPermissions()

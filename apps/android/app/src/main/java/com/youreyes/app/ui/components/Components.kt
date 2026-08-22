@@ -401,6 +401,11 @@ fun MiniStat(
                 style = MaterialTheme.typography.titleLarge,
                 color = if (colors.isHighContrast) colors.ink else valueColor,
                 textAlign = TextAlign.Center,
+                // A stat is a short figure. Anything long enough to wrap is not a
+                // stat and should not have been passed here; clip it rather than
+                // let it break mid-token across two lines.
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = label,

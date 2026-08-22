@@ -29,16 +29,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.youreyes.app.ui.components.GradientButton
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun AuthRoute(modifier: Modifier = Modifier) {
+fun AuthRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: AuthViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     AuthScreen(
@@ -51,6 +52,7 @@ fun AuthRoute(modifier: Modifier = Modifier) {
         onSubmitCredentials = viewModel::submitCredentials,
         onSubmitOtp = viewModel::submitOtp,
         onLogout = viewModel::logout,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -67,8 +69,9 @@ fun AuthScreen(
     onSubmitOtp: () -> Unit = {},
     onLogout: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Tài Khoản") {
+    ScreenShell(modifier = modifier, title = "Tài Khoản", onBack = onBack) {
         when {
             state.isLoggedIn -> LoggedInCard(state, onLogout)
             state.step == AuthStep.OTP -> OtpCard(state, onOtpCodeChange, onSubmitOtp)
@@ -86,7 +89,7 @@ fun AuthScreen(
             Text(
                 text = state.message,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = if (state.isError) YourEyesDanger else YourEyesSuccess,
+                    color = if (state.isError) dangerColor else successColor,
                     fontWeight = FontWeight.Bold,
                 ),
             )
@@ -99,8 +102,8 @@ private fun LoggedInCard(state: AuthUiState, onLogout: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -108,11 +111,11 @@ private fun LoggedInCard(state: AuthUiState, onLogout: () -> Unit) {
         ) {
             Text(
                 text = state.loggedInDisplayName.ifBlank { "Đã đăng nhập" },
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black, color = YourEyesInk),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black, color = inkColor),
             )
             Text(
                 text = "SĐT: ${state.loggedInPhoneNumber}",
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
             )
             OutlinedButton(onClick = onLogout, enabled = !state.isLoading) {
                 Text(if (state.isLoading) "Đang đăng xuất..." else "Đăng Xuất")
@@ -126,8 +129,8 @@ private fun OtpCard(state: AuthUiState, onOtpCodeChange: (String) -> Unit, onSub
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -135,11 +138,11 @@ private fun OtpCard(state: AuthUiState, onOtpCodeChange: (String) -> Unit, onSub
         ) {
             Text(
                 text = "Nhập mã OTP đã gửi tới ${state.phoneNumber}",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
             )
             Text(
                 text = "Server demo chưa nối SMS thật — mã OTP được ghi vào log server.",
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
             )
             OutlinedTextField(
                 value = state.otpCode,
@@ -190,10 +193,10 @@ private fun CredentialsCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp), spotColor = YourEyesShadow),
+            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp), spotColor = shadowColor),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -248,13 +251,13 @@ private fun ModeChip(
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
-        border = BorderStroke(1.dp, if (isSelected) YourEyesCyan else YourEyesBorder),
+        border = BorderStroke(1.dp, if (isSelected) accentColor else borderColor),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
-                color = if (isSelected) YourEyesCyan else YourEyesMuted,
+                color = if (isSelected) accentColor else mutedColor,
             ),
         )
     }

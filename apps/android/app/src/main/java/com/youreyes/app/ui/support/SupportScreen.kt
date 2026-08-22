@@ -31,16 +31,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.youreyes.app.ui.components.GradientButton
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesMintSoft
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesSuccess
-import com.youreyes.app.ui.theme.YourEyesTeal
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.accentSoftColor
+import com.youreyes.app.ui.theme.accentTextColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun SupportRoute(modifier: Modifier = Modifier) {
+fun SupportRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: SupportViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(Unit) { viewModel.refresh() }
@@ -50,6 +51,7 @@ fun SupportRoute(modifier: Modifier = Modifier) {
         onCategoryChange = viewModel::onCategoryChange,
         onMessageChange = viewModel::onMessageChange,
         onSubmit = viewModel::submit,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -61,12 +63,13 @@ fun SupportScreen(
     onMessageChange: (String) -> Unit = {},
     onSubmit: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Hỗ Trợ & Góp Ý") {
+    ScreenShell(modifier = modifier, title = "Hỗ Trợ & Góp Ý", onBack = onBack) {
         if (!state.isLoggedIn) {
             Text(
                 text = "Đăng nhập ở mục \"Tài Khoản Đăng Nhập\" trong Hồ sơ để gửi yêu cầu hỗ trợ.",
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
             )
         }
 
@@ -89,8 +92,8 @@ fun SupportScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = BorderStroke(1.dp, borderColor),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -106,7 +109,7 @@ fun SupportScreen(
                 )
                 Text(
                     text = "${state.messageText.length}/${SupportUiState.MAX_MESSAGE_LENGTH}",
-                    style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 11.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 11.sp),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 GradientButton(
@@ -118,7 +121,7 @@ fun SupportScreen(
                     Text(
                         text = state.statusMessage,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (state.isError) YourEyesDanger else YourEyesSuccess,
+                            color = if (state.isError) dangerColor else successColor,
                             fontWeight = FontWeight.Bold,
                         ),
                     )
@@ -141,9 +144,9 @@ private fun CategoryChip(
             .clip(RoundedCornerShape(999.dp))
             .background(
                 when {
-                    !enabled -> YourEyesMintSoft.copy(alpha = 0.5f)
-                    isSelected -> YourEyesCyan
-                    else -> YourEyesMintSoft
+                    !enabled -> accentSoftColor.copy(alpha = 0.5f)
+                    isSelected -> accentColor
+                    else -> accentSoftColor
                 }
             )
             .clickable(enabled = enabled, onClick = onClick)
@@ -155,7 +158,7 @@ private fun CategoryChip(
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected && enabled) Color.White else YourEyesTeal.copy(alpha = if (enabled) 1f else 0.6f),
+                color = if (isSelected && enabled) Color.White else accentTextColor.copy(alpha = if (enabled) 1f else 0.6f),
             ),
         )
     }

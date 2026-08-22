@@ -29,19 +29,21 @@ import com.youreyes.app.ui.components.DemoBanner
 import com.youreyes.app.ui.components.GradientButton
 import com.youreyes.app.ui.components.SectionLabel
 import com.youreyes.app.ui.components.ScreenShell
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun TranslationRoute(modifier: Modifier = Modifier) {
+fun TranslationRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: TranslationViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     TranslationScreen(
         state = state,
         onSwapLanguages = viewModel::swapLanguages,
         onToggleListening = viewModel::toggleListening,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -52,15 +54,16 @@ fun TranslationScreen(
     onSwapLanguages: () -> Unit = {},
     onToggleListening: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Dịch Thuật") {
+    ScreenShell(modifier = modifier, title = "Dịch Thuật", onBack = onBack) {
         DemoBanner("Bản demo — chưa nối AI dịch thuật thật. Bấm micro sẽ hiện câu mẫu giả lập.")
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = BorderStroke(1.dp, borderColor),
         ) {
             Row(
                 modifier = Modifier.padding(14.dp).fillMaxWidth(),
@@ -69,15 +72,15 @@ fun TranslationScreen(
             ) {
                 Text(
                     text = state.sourceLanguage,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onSwapLanguages, enabled = state.canSwapLanguages) {
-                    Icon(imageVector = Icons.Default.SwapHoriz, contentDescription = "Đổi chiều", tint = YourEyesCyan)
+                    Icon(imageVector = Icons.Default.SwapHoriz, contentDescription = "Đổi chiều", tint = accentColor)
                 }
                 Text(
                     text = state.targetLanguage,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -103,8 +106,8 @@ private fun TranslationEntryCard(entry: TranslationEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -112,11 +115,11 @@ private fun TranslationEntryCard(entry: TranslationEntry) {
         ) {
             Text(
                 text = entry.originalText,
-                style = MaterialTheme.typography.bodyMedium.copy(color = YourEyesInk, fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                style = MaterialTheme.typography.bodyMedium.copy(color = inkColor, fontWeight = FontWeight.Bold, fontSize = 14.sp),
             )
             Text(
                 text = entry.translatedText,
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesCyan, fontSize = 13.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = accentColor, fontSize = 13.sp),
             )
         }
     }
@@ -127,12 +130,12 @@ private fun EmptyTranslationCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Text(
             text = "Chưa có câu nào được dịch.",
-            style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
             modifier = Modifier.padding(16.dp),
         )
     }

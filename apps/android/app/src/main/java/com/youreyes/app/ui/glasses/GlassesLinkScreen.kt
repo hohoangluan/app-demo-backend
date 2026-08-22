@@ -38,18 +38,19 @@ import com.youreyes.app.ui.components.GradientButton
 import com.youreyes.app.ui.components.RowCard
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
 fun GlassesLinkRoute(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
 ) {
     val viewModel: GlassesLinkViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
@@ -60,6 +61,7 @@ fun GlassesLinkRoute(
         onGlassesDeviceIdChange = viewModel::onGlassesDeviceIdChange,
         onLinkClick = viewModel::link,
         onUnlinkClick = viewModel::unlink,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -71,8 +73,9 @@ fun GlassesLinkScreen(
     onLinkClick: () -> Unit = {},
     onUnlinkClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Pairing Kính") {
+    ScreenShell(modifier = modifier, title = "Pairing Kính", onBack = onBack) {
         // Pairing Hero Banner
         Card(
             modifier = Modifier
@@ -80,19 +83,18 @@ fun GlassesLinkScreen(
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(22.dp),
-                    spotColor = YourEyesShadow,
+                    spotColor = shadowColor,
                 ),
             shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Text(
                     text = "Liên Kết Kính Your Eyes",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Black,
-                        color = YourEyesInk,
-                        fontSize = 19.sp,
+                        color = inkColor,
                     ),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -100,9 +102,7 @@ fun GlassesLinkScreen(
                     text = "Nhập số Serial in ở gọng kính để liên kết kính với tài khoản của bạn " +
                         "(Tài khoản: ${state.userId.ifBlank { "chưa đăng ký" }}).",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = YourEyesMuted,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        color = mutedColor,
                     ),
                 )
             }
@@ -115,8 +115,8 @@ fun GlassesLinkScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -148,7 +148,7 @@ fun GlassesLinkScreen(
                     Text(
                         text = state.message,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (state.message.startsWith("❌")) YourEyesDanger else YourEyesSuccess,
+                            color = if (state.message.startsWith("❌")) dangerColor else successColor,
                             fontWeight = FontWeight.Bold,
                         ),
                     )
@@ -162,7 +162,7 @@ fun GlassesLinkScreen(
             title = "Tìm mã trên kính",
             subtitle = "Mã kính được in laser ở mặt trong gọng kính phải, hoặc do đội cấp kính cung cấp.",
             icon = Icons.Default.Info,
-            iconTone = YourEyesCyan,
+            iconTone = accentColor,
         )
     }
 }
@@ -173,8 +173,8 @@ private fun PairingStatusCard(pairedDeviceId: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -184,18 +184,18 @@ private fun PairingStatusCard(pairedDeviceId: String) {
                 modifier = Modifier
                     .size(10.dp)
                     .clip(CircleShape)
-                    .background(if (isPaired) YourEyesSuccess else YourEyesMuted),
+                    .background(if (isPaired) successColor else mutedColor),
             )
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(
                     text = if (isPaired) "Đang liên kết" else "Chưa liên kết kính nào",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk, fontSize = 14.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor, fontSize = 14.sp),
                 )
                 if (isPaired) {
                     Text(
                         text = "Mã kính: $pairedDeviceId",
-                        style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
                     )
                 }
             }

@@ -26,11 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.youreyes.app.ui.components.ScreenShell
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 data class GuideSection(val title: String, val body: String)
 
@@ -77,8 +77,8 @@ val guideSections = listOf(
 )
 
 @Composable
-fun UserGuideScreen(modifier: Modifier = Modifier) {
-    ScreenShell(modifier = modifier, title = "Hướng Dẫn Sử Dụng") {
+fun UserGuideScreen(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
+    ScreenShell(modifier = modifier, title = "Hướng Dẫn Sử Dụng", onBack = onBack) {
         guideSections.forEach { section -> GuideCard(section) }
     }
 }
@@ -92,8 +92,8 @@ private fun GuideCard(section: GuideSection) {
             .fillMaxWidth()
             .clickable { expanded = !expanded },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -105,24 +105,21 @@ private fun GuideCard(section: GuideSection) {
                     text = section.title,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = YourEyesInk,
-                        fontSize = 14.sp,
+                        color = inkColor,
                     ),
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = YourEyesMuted,
+                    tint = mutedColor,
                 )
             }
             if (expanded) {
                 Text(
                     text = section.body,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = YourEyesMuted,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp,
+                        color = mutedColor,
                     ),
                     modifier = Modifier.padding(top = 6.dp),
                 )

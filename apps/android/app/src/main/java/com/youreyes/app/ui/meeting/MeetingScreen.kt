@@ -28,19 +28,21 @@ import com.youreyes.app.ui.components.DemoBanner
 import com.youreyes.app.ui.components.GradientButton
 import com.youreyes.app.ui.components.SectionLabel
 import com.youreyes.app.ui.components.ScreenShell
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesDanger
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMuted
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.dangerColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
-fun MeetingRoute(modifier: Modifier = Modifier) {
+fun MeetingRoute(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val viewModel: MeetingViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     MeetingScreen(
         state = state,
         onStartRecording = viewModel::startRecording,
         onStopRecording = viewModel::stopRecording,
+        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -51,15 +53,16 @@ fun MeetingScreen(
     onStartRecording: () -> Unit = {},
     onStopRecording: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
-    ScreenShell(modifier = modifier, title = "Biên Bản Họp") {
+    ScreenShell(modifier = modifier, title = "Biên Bản Họp", onBack = onBack) {
         DemoBanner("Bản demo — chưa nối AI ghi âm/phiên âm thật. Nội dung transcript bên dưới là câu mẫu giả lập theo thời gian.")
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.dp, YourEyesBorder),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = BorderStroke(1.dp, borderColor),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -72,13 +75,13 @@ fun MeetingScreen(
                 ) {
                     Text(
                         text = if (state.isRecording) "Đang ghi âm..." else "Sẵn sàng ghi âm",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
                     )
                     Text(
                         text = formatDuration(state.elapsedSeconds),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Black,
-                            color = if (state.isRecording) YourEyesDanger else YourEyesMuted,
+                            color = if (state.isRecording) dangerColor else mutedColor,
                         ),
                     )
                 }
@@ -86,7 +89,7 @@ fun MeetingScreen(
                 if (state.liveTranscript.isNotBlank()) {
                     Text(
                         text = state.liveTranscript,
-                        style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp, lineHeight = 18.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp, lineHeight = 18.sp),
                     )
                 }
 
@@ -112,8 +115,8 @@ private fun MeetingRecordCard(record: MeetingRecord) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -125,16 +128,16 @@ private fun MeetingRecordCard(record: MeetingRecord) {
             ) {
                 Text(
                     text = record.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = YourEyesInk, fontSize = 14.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor, fontSize = 14.sp),
                 )
                 Text(
                     text = formatDuration(record.durationSeconds),
-                    style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
                 )
             }
             Text(
                 text = record.transcriptSnippet,
-                style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp, lineHeight = 16.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp, lineHeight = 16.sp),
                 maxLines = 3,
             )
         }
@@ -146,12 +149,12 @@ private fun EmptyMeetingCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Text(
             text = "Chưa có biên bản họp nào được lưu.",
-            style = MaterialTheme.typography.bodySmall.copy(color = YourEyesMuted, fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
             modifier = Modifier.padding(16.dp),
         )
     }
