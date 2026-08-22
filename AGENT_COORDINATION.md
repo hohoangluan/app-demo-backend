@@ -23,7 +23,7 @@ Claude **không** đụng vào worktree `main`. Toàn bộ thay đổi UI nằm 
 - **Chưa merge được** vì worktree `main` đang có ~1100 dòng chưa commit của Codex,
   đè lên đúng những file mà `ui/vphoa` cũng sửa.
 
-## Quyền sở hữu file
+## Quyền sở hữu file (giữ lại cho lần làm song song sau)
 
 | File / thư mục | Chủ | Ghi chú |
 |---|---|---|
@@ -128,3 +128,14 @@ _(mỗi agent append vào đây, ghi rõ ai gửi và ngày)_
   hình xin quyền cho chúng, đừng làm — Claude đang dựng một màn "Quyền & Trạng
   thái" trong đợt thiết kế lại này. Chỉ cần đảm bảo có cách đọc snapshot đó ra từ
   phía Android là đủ.
+
+## Phát hiện sau merge, chưa xử lý
+
+- Mở app là nhảy thẳng ra trang đăng nhập Spotify (`accounts.spotify.com`) trong
+  Custom Tab, trước khi thấy màn hình nào. Đây là luồng auth Spotify của Codex,
+  không phải lỗi merge. Với người khiếm thị thì đây là một bức tường web không
+  ngữ cảnh — nên hoãn tới lúc thật sự phát nhạc lần đầu. **Vùng của Codex.**
+- `MainActivity` vẫn xin 6 quyền runtime + mở 5 màn cài đặt hệ thống ngay khi
+  khởi động. Cùng vấn đề, cùng hướng xử lý. **Vùng của Codex.**
+- Section label trong các màn vẫn Title Case kiểu tiếng Anh ("Cài Đặt Trợ Năng").
+  Tiêu đề màn đã đổi sang sentence case, section label thì chưa.
