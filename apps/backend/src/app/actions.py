@@ -25,6 +25,9 @@ class Operation(StrEnum):
     EMERGENCY_CALL = "emergency_call"
     CONTACT_CALL = "contact_call"
     LOCATION_GET = "location_get"
+    CAPABILITIES_GET = "capabilities_get"
+    CALL_ANSWER = "call_answer"
+    CALL_REJECT = "call_reject"
 
 
 class Action(StrEnum):
@@ -40,6 +43,9 @@ class Action(StrEnum):
     EMERGENCY_CALL = "emergency_call"
     CONTACT_CALL = "contact_call"
     LOCATION_GET = "location_get"
+    CAPABILITIES_GET = "capabilities_get"
+    CALL_ANSWER = "call_answer"
+    CALL_REJECT = "call_reject"
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +129,27 @@ ACTION_ROUTES: Final = (
         Operation.LOCATION_GET,
         Action.LOCATION_GET,
         30,
+    ),
+    ActionRoute(
+        HttpMethod.POST,
+        "/api/v1/service/capabilities",
+        Operation.CAPABILITIES_GET,
+        Action.CAPABILITIES_GET,
+        30,
+    ),
+    ActionRoute(
+        HttpMethod.POST,
+        "/api/v1/service/call/answer",
+        Operation.CALL_ANSWER,
+        Action.CALL_ANSWER,
+        20,
+    ),
+    ActionRoute(
+        HttpMethod.POST,
+        "/api/v1/service/call/reject",
+        Operation.CALL_REJECT,
+        Action.CALL_REJECT,
+        20,
     ),
 )
 

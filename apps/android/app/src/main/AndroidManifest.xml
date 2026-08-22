@@ -4,6 +4,10 @@
     <!-- ── Phone & Contacts ─────────────────────────────────────────── -->
     <!-- emergency_call, contact_call: dial/call phone number -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- T19: observe ringing state/caller and accept or reject from glasses. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- emergency_call: send location SMS to the configured emergency contact -->
     <uses-permission android:name="android.permission.SEND_SMS" />
@@ -13,11 +17,6 @@
     <!-- ── Audio ────────────────────────────────────────────────────── -->
     <!-- music_volume: adjust media stream volume -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-
-    <!-- ── Camera ───────────────────────────────────────────────────── -->
-    <!-- camera_capture: open camera for photo/video -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- ── Location ─────────────────────────────────────────────────── -->
     <!-- navigation_start: pass current location to Google Maps -->
@@ -53,6 +52,15 @@
     -->
     <queries>
         <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.spotify.music" />
+        <!--
+            music_play's fallback when Spotify takes the search but never produces
+            audio (a Free account cannot start an arbitrary track on demand).
+            Without this entry getPackageInfo() throws NameNotFoundException and
+            binding MusicBrowserService fails, so the fallback would silently never
+            run - exactly the trap the comment above describes, for the one app it
+            names but never listed.
+        -->
         <package android:name="com.google.android.apps.youtube.music" />
         <package android:name="com.grabtaxi.passenger" />
         <intent>
@@ -62,6 +70,7 @@
     </queries>
 
     <application
+        android:name=".YourEyesApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -101,6 +110,14 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".telephony.PhoneStateBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
 
         <!--
             Executes one pushed command. Handlers wait for the handset to confirm

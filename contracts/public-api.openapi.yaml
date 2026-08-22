@@ -291,6 +291,134 @@ paths:
                   details: {}
       security:
       - PublicBearerAuth: []
+  /api/v1/service/location/get:
+    post:
+      summary: Location Get
+      description: Describe the device location lookup endpoint contract.
+      operationId: location_get_api_v1_service_location_get_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationGetRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/call/answer:
+    post:
+      summary: Call Answer
+      description: Describe the incoming-call answer endpoint contract.
+      operationId: call_answer_api_v1_service_call_answer_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallAnswerRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/call/reject:
+    post:
+      summary: Call Reject
+      description: Describe the incoming-call rejection endpoint contract.
+      operationId: call_reject_api_v1_service_call_reject_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallRejectRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
+  /api/v1/service/capabilities:
+    post:
+      summary: Capabilities Get
+      description: Describe the Android capability snapshot endpoint contract.
+      operationId: capabilities_get_api_v1_service_capabilities_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapabilitiesGetRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_AcceptedData_'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                error:
+                  code: INVALID_REQUEST
+                  message: Invalid request
+                  details: {}
+      security:
+      - PublicBearerAuth: []
   /api/v1/requests/{request_id}:
     get:
       summary: Request Status
@@ -355,6 +483,55 @@ components:
       - $ref: '#/components/schemas/NavigationStopResult'
       - $ref: '#/components/schemas/EmergencyCallResult'
       - $ref: '#/components/schemas/ContactCallResult'
+      - $ref: '#/components/schemas/LocationGetResult'
+    CallAnswerRequest:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      - request_id
+      title: CallAnswerRequest
+      description: Answer the currently ringing phone call.
+    CallRejectRequest:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      - request_id
+      title: CallRejectRequest
+      description: Reject the currently ringing phone call.
+    CapabilitiesGetRequest:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      - request_id
+      title: CapabilitiesGetRequest
+      description: Request the Android client's fixed capability snapshot.
     ContactCallRequest:
       properties:
         device_id:
@@ -519,6 +696,52 @@ components:
       title: ErrorResponse
       description: Synchronous Public API error envelope.
     JsonValue: {}
+    LocationGetRequest:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      - request_id
+      title: LocationGetRequest
+      description: Request the device's current location.
+    LocationGetResult:
+      properties:
+        lat:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Lat
+        lng:
+          type: number
+          maximum: 180.0
+          minimum: -180.0
+          title: Lng
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+        captured_at:
+          type: string
+          format: date-time
+          title: Captured At
+      additionalProperties: false
+      type: object
+      required:
+      - lat
+      - lng
+      - address
+      - captured_at
+      title: LocationGetResult
+      description: Final result of a device location lookup.
     MusicPlayRequest:
       properties:
         device_id:
@@ -538,6 +761,11 @@ components:
             minimum: 0.0
           - type: 'null'
           title: Volume
+        spotify_uri:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Spotify Uri
       additionalProperties: false
       type: object
       required:
@@ -789,6 +1017,10 @@ components:
       - navigation_stop
       - emergency_call
       - contact_call
+      - location_get
+      - capabilities_get
+      - call_answer
+      - call_reject
       title: Operation
       description: Operations exposed in Public API responses.
     PriceEstimate:

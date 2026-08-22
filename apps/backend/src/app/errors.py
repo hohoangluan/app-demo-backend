@@ -161,6 +161,13 @@ class GlassesDeviceNotLinkedError(PublicApiError):
     code = "GLASSES_DEVICE_NOT_LINKED"
 
 
+class DeviceEventForwardError(PublicApiError):
+    """Raised when a spontaneous phone event cannot reach the glasses server."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "DEVICE_EVENT_FORWARD_FAILED"
+
+
 def _error_response(
     *, status_code: int, code: str, message: str, details: dict[str, Any]
 ) -> JSONResponse:

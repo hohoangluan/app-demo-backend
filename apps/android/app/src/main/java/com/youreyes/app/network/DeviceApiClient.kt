@@ -2,6 +2,7 @@ package com.youreyes.app.network
 
 import com.youreyes.app.model.DeviceRegisterPayload
 import com.youreyes.app.model.DeviceReportPayload
+import com.youreyes.app.model.DeviceEventPayload
 import com.youreyes.app.model.GlassesLinkPayload
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -11,6 +12,40 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class DeviceApiClient {
+
+    fun sendEvent(baseUrl: String, bearerToken: String, payload: DeviceEventPayload): Result<Boolean> {
+        return runCatching {
+            val endpointUrl = "${baseUrl.trimEnd('/')}/api/v1/device/event"
+            val conn = URL(endpointUrl).openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Authorization", "Bearer $bearerToken")
+            conn.doOutput = true
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+
+            val jsonBody = JSONObject().apply {
+                put("device_id", payload.deviceId)
+                put("type", payload.type)
+                payload.caller?.let { caller ->
+                    put("caller", JSONObject().apply {
+                        caller.contactId?.let { put("contact_id", it) }
+                        caller.name?.let { put("name", it) }
+                        caller.numberTail?.let { put("number_tail", it) }
+                        if (caller.duplicateName) put("duplicate_name", true)
+                    })
+                }
+            }
+            OutputStreamWriter(conn.outputStream).use { it.write(jsonBody.toString()) }
+            val responseCode = conn.responseCode
+            if (responseCode !in 200..299) {
+                val responseText = conn.errorStream?.bufferedReader()
+                    ?.use(BufferedReader::readText).orEmpty()
+                throw IllegalStateException("Device event failed ($responseCode): $responseText")
+            }
+            true
+        }
+    }
 
     fun registerDevice(baseUrl: String, bearerToken: String, payload: DeviceRegisterPayload): Result<Boolean> {
         return runCatching {

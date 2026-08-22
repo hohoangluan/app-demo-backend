@@ -7,6 +7,8 @@ from fastapi.security import HTTPBearer
 
 from app.schemas.common import OkResponse
 from app.schemas.device import (
+    DeviceEventData,
+    DeviceEventRequest,
     DeviceRegisterData,
     DeviceRegisterRequest,
     DeviceReportData,
@@ -45,6 +47,16 @@ async def register_device(_request: DeviceRegisterRequest) -> Never:
 )
 async def report_device_result(_request: DeviceReportRequest) -> Never:
     """Describe the Android device report endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/device/event",
+    response_model=OkResponse[DeviceEventData],
+    status_code=status.HTTP_200_OK,
+)
+async def post_device_event(_request: DeviceEventRequest) -> Never:
+    """Describe the spontaneous Android event endpoint contract."""
     _contract_only()
 
 

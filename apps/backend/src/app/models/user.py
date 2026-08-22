@@ -12,6 +12,7 @@ from app.database import Base
 
 FONT_SIZE_OPTIONS = ("Nhỏ", "Vừa", "To")
 VOICE_OPTIONS = ("Giọng Nữ", "Giọng Nam")
+ANNOUNCE_CALLER_OPTIONS = ("name", "number_only", "ring_only")
 
 
 class User(Base):
@@ -28,6 +29,10 @@ class User(Base):
         CheckConstraint(
             "voice_option IN ('Giọng Nữ', 'Giọng Nam')",
             name="ck_users_voice_option",
+        ),
+        CheckConstraint(
+            "announce_caller IN ('name', 'number_only', 'ring_only')",
+            name="ck_users_announce_caller",
         ),
     )
 
@@ -54,6 +59,9 @@ class User(Base):
     )
     haptics_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    announce_caller: Mapped[str] = mapped_column(
+        String, nullable=False, default="name", server_default=text("'name'")
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

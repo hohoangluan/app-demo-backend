@@ -52,6 +52,7 @@ async def test_get_preferences_returns_documented_defaults(
         "voice_option": "Giọng Nữ",
         "high_contrast": False,
         "haptics_enabled": True,
+        "announce_caller": "name",
     }
 
 
@@ -72,6 +73,7 @@ async def test_update_preferences_persists_and_returns_new_values(
         "voice_option": "Giọng Nam",
         "high_contrast": True,
         "haptics_enabled": False,
+        "announce_caller": "ring_only",
     }
 
     update_response = await db_client.put("/api/v1/preferences", json=body, headers=headers)
@@ -94,6 +96,7 @@ async def test_update_preferences_rejects_unknown_font_size_option(
             "voice_option": "Giọng Nữ",
             "high_contrast": False,
             "haptics_enabled": True,
+            "announce_caller": "name",
         },
         headers={"Authorization": f"Bearer {token}"},
     )

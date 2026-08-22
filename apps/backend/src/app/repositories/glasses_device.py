@@ -154,3 +154,13 @@ class GlassesDeviceRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def get_active_device_id(self, user_id: str) -> str | None:
+        """Return the glasses currently paired to ``user_id``, or ``None``."""
+        result = await self._session.execute(
+            select(GlassesDevice.device_id).where(
+                GlassesDevice.user_id == user_id,
+                GlassesDevice.status == GlassesLinkStatus.ACTIVE,
+            )
+        )
+        return result.scalar_one_or_none()

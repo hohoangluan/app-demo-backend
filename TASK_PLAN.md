@@ -236,6 +236,37 @@ Ghi chÃ­nh xÃ¡c lá»‡nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng Ä‘�
 - Kiểm tra `git rev-list --all --objects`: pass — đường dẫn credential không còn trong refs. Kiểm tra blob cũ bằng `git cat-file -e`: pass — blob đã bị prune khỏi object store.
 - Không chạy test ứng dụng vì thay đổi chỉ liên quan đến lịch sử Git và nhật ký dự án; giữ nguyên toàn bộ thay đổi chưa commit của user.
 
+### 2026-08-22 — Session 6
+
+- Verified the current Android app on AVD `emulator-5554`: Gradle 9.5.0 wrapper download completed, `testDebugUnitTest assembleDebug` passed, APK installed, and the app process remained alive without app-level crash/exception logs.
+- Removed the Android `CAMERA` permission and optional camera feature declaration. The app no longer requests camera access at startup; the existing external system-camera intent remains permissionless.
+- Added T23 `capabilities_get` end to end: Android's fixed 10-field snapshot, Public Service operation route, database constraint migration, regenerated OpenAPI contracts, and `play-services-location`.
+- Verification passed: backend action mapping 14 tests, selected ruff checks, OpenAPI check, Android unit tests/assemble, and AVD cold-start without app crash. Real handset installation is still pending because the device disconnected from ADB.
+- Kept all pre-existing uncommitted Spotify/backend/contract changes intact.
+
+### 2026-08-22 — Session 7 (T19 incoming calls)
+
+- Added the spontaneous `POST /api/v1/device/event` path, independent from
+  registered action callbacks/request IDs. The host resolves the phone owner to
+  their active glasses and forwards to `/internal/device-events`.
+- Added `announce_caller` (`name | number_only | ring_only`, default `name`) to
+  preferences/model/repository/API and Alembic migration `20260822_0007`.
+- Added `call_answer` and `call_reject` operations, service endpoints, contract
+  routes, OpenAPI artifacts, Android action handlers, and migration `0006`.
+- Android now monitors ringing with `TelephonyCallback` (legacy fallback), joins
+  the protected phone-state broadcast for the incoming number, resolves names
+  locally through `PhoneLookup`, and never puts the full number into a network
+  payload or log.
+- Verification: backend selected suite 34 passed/2 opt-in PostgreSQL tests
+  skipped; the same 2 integration tests passed earlier against the disposable
+  PostgreSQL database after migrations 0001..0007. Android unit tests/assemble,
+  APK install/launch, emulator GSM call state, and a saved-contact lookup all
+  passed (`contact=true`, `tailDigits=4`).
+- T19 remains PARTIAL overall because the glasses firmware SSE/audio path is
+  blocked by the T18 board/RAM prerequisite. The emulator also has no persisted
+  production device registration, so its live event correctly stopped before
+  HTTP with a non-sensitive warning.
+
 
 ## Protocol tiếp tục ở session mới
 

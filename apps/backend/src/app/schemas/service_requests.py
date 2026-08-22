@@ -79,6 +79,7 @@ class MusicPlayRequest(ServiceRequest):
 
     song: TrimmedNonEmptyStr
     volume: VolumeLevel | None = None
+    spotify_uri: str | None = None
 
 
 class MusicStopRequest(ServiceRequest):
@@ -134,6 +135,18 @@ class ContactCallRequest(ServiceRequest):
 
 class LocationGetRequest(ServiceRequest):
     """Request the device's current location."""
+
+
+class CapabilitiesGetRequest(ServiceRequest):
+    """Request the Android client's fixed capability snapshot."""
+
+
+class CallAnswerRequest(ServiceRequest):
+    """Answer the currently ringing phone call."""
+
+
+class CallRejectRequest(ServiceRequest):
+    """Reject the currently ringing phone call."""
 
 
 class QuotesSpeakRequest(ServiceRequest):

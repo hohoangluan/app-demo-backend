@@ -33,6 +33,7 @@ async def get_preferences(
         voice_option=user.voice_option,  # type: ignore[arg-type]
         high_contrast=user.high_contrast,
         haptics_enabled=user.haptics_enabled,
+        announce_caller=user.announce_caller,  # type: ignore[arg-type]
     )
     return OkResponse(data=data)
 
@@ -51,6 +52,7 @@ async def update_preferences(
         voice_option=body.voice_option,
         high_contrast=body.high_contrast,
         haptics_enabled=body.haptics_enabled,
+        announce_caller=body.announce_caller,
     )
     if user is None:
         message = "Authenticated session references a missing user row"
@@ -63,5 +65,6 @@ async def update_preferences(
         voice_option=user.voice_option,  # type: ignore[arg-type]
         high_contrast=user.high_contrast,
         haptics_enabled=user.haptics_enabled,
+        announce_caller=user.announce_caller,  # type: ignore[arg-type]
     )
     return OkResponse(data=data)

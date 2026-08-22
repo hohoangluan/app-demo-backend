@@ -15,6 +15,9 @@ from app.errors import RequestIdConflictError
 from app.repositories.glasses_device import GlassesDeviceRepository
 from app.schemas.common import AcceptedData, AcceptedResponse
 from app.schemas.service_requests import (  # noqa: TC001
+    CallAnswerRequest,
+    CallRejectRequest,
+    CapabilitiesGetRequest,
     ContactCallRequest,
     EmergencyCallRequest,
     LocationGetRequest,
@@ -147,6 +150,11 @@ async def post_music_play(
     wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
 ) -> AcceptedResponse:
     """Accept or reuse a music play operation."""
+    if not body.spotify_uri:
+        from app.services.spotify import SpotifyCatalogAdapter
+
+        adapter = SpotifyCatalogAdapter()
+        body.spotify_uri = await adapter.resolve_track_uri(body.song)
     return await _accept_operation(
         "/api/v1/service/music/play", body, principal, session, settings, wake_signals
     )
@@ -269,4 +277,64 @@ async def post_location_get(
     """Accept or reuse a device location lookup operation."""
     return await _accept_operation(
         "/api/v1/service/location/get", body, principal, session, settings, wake_signals
+    )
+
+
+@router.post(
+    "/capabilities",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def post_capabilities_get(
+    body: CapabilitiesGetRequest,
+    principal: Annotated[
+        ClientPrincipal, Depends(require_public_scope(PublicApiScope.SERVICE_EXECUTE))
+    ],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
+) -> AcceptedResponse:
+    """Accept or reuse an Android capability snapshot operation."""
+    return await _accept_operation(
+        "/api/v1/service/capabilities", body, principal, session, settings, wake_signals
+    )
+
+
+@router.post(
+    "/call/answer",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def post_call_answer(
+    body: CallAnswerRequest,
+    principal: Annotated[
+        ClientPrincipal, Depends(require_public_scope(PublicApiScope.SERVICE_EXECUTE))
+    ],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
+) -> AcceptedResponse:
+    """Accept a request to answer the currently ringing call."""
+    return await _accept_operation(
+        "/api/v1/service/call/answer", body, principal, session, settings, wake_signals
+    )
+
+
+@router.post(
+    "/call/reject",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def post_call_reject(
+    body: CallRejectRequest,
+    principal: Annotated[
+        ClientPrincipal, Depends(require_public_scope(PublicApiScope.SERVICE_EXECUTE))
+    ],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    wake_signals: Annotated[WorkerWakeSignals, Depends(get_worker_wake_signals)],
+) -> AcceptedResponse:
+    """Accept a request to reject the currently ringing call."""
+    return await _accept_operation(
+        "/api/v1/service/call/reject", body, principal, session, settings, wake_signals
     )

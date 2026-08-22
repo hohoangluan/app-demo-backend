@@ -15,6 +15,9 @@ enum class ActionType(val value: String) {
     EMERGENCY_CALL("emergency_call"),
     CONTACT_CALL("contact_call"),
     LOCATION_GET("location_get"),
+    CAPABILITIES_GET("capabilities_get"),
+    CALL_ANSWER("call_answer"),
+    CALL_REJECT("call_reject"),
 
     // Additional local-demo-only actions (no backend counterpart yet)
     QUOTES_SPEAK("quotes_speak"),
@@ -38,6 +41,20 @@ data class DeviceRegisterPayload(
     val deviceId: String,
     val platform: String = "android",
     val pushToken: String
+)
+
+/** T19 privacy boundary: this object can never carry a full phone number. */
+data class IncomingCallerPayload(
+    val contactId: String? = null,
+    val name: String? = null,
+    val numberTail: String? = null,
+    val duplicateName: Boolean = false,
+)
+
+data class DeviceEventPayload(
+    val deviceId: String,
+    val type: String,
+    val caller: IncomingCallerPayload? = null,
 )
 
 // Pairs a glasses hardware device_id (a separate id space from the Android

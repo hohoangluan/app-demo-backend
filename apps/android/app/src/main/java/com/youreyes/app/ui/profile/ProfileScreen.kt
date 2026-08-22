@@ -370,7 +370,7 @@ fun ProfileScreen(
 
         RowCard(
             title = "Thử nghiệm 9 Native Action Handlers",
-            subtitle = "Chạy kiểm thử local các action: YouTube Music, Google Maps, Camera, Calling...",
+            subtitle = "Chạy kiểm thử local các action: Spotify, Google Maps, Camera, Calling...",
             icon = Icons.Default.Build,
             iconTone = YourEyesCyan,
             onClick = onNavigateToDevTest,
