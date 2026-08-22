@@ -115,11 +115,11 @@ private fun TranslationEntryCard(entry: TranslationEntry) {
         ) {
             Text(
                 text = entry.originalText,
-                style = MaterialTheme.typography.bodyMedium.copy(color = inkColor, fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                style = MaterialTheme.typography.bodyMedium.copy(color = inkColor, fontWeight = FontWeight.Bold),
             )
             Text(
                 text = entry.translatedText,
-                style = MaterialTheme.typography.bodySmall.copy(color = accentColor, fontSize = 13.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = accentColor),
             )
         }
     }
@@ -135,7 +135,7 @@ private fun EmptyTranslationCard() {
     ) {
         Text(
             text = "Chưa có câu nào được dịch.",
-            style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
             modifier = Modifier.padding(16.dp),
         )
     }

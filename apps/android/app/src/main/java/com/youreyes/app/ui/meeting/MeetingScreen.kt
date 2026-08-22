@@ -89,7 +89,7 @@ fun MeetingScreen(
                 if (state.liveTranscript.isNotBlank()) {
                     Text(
                         text = state.liveTranscript,
-                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp, lineHeight = 18.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                     )
                 }
 
@@ -128,16 +128,16 @@ private fun MeetingRecordCard(record: MeetingRecord) {
             ) {
                 Text(
                     text = record.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor, fontSize = 14.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
                 )
                 Text(
                     text = formatDuration(record.durationSeconds),
-                    style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                 )
             }
             Text(
                 text = record.transcriptSnippet,
-                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp, lineHeight = 16.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                 maxLines = 3,
             )
         }
@@ -154,7 +154,7 @@ private fun EmptyMeetingCard() {
     ) {
         Text(
             text = "Chưa có biên bản họp nào được lưu.",
-            style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
             modifier = Modifier.padding(16.dp),
         )
     }

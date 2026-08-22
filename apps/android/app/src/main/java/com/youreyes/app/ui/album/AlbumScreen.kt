@@ -147,7 +147,7 @@ private fun EmptyCard() {
             )
             Text(
                 text = "Ảnh chụp qua lệnh của kính (camera_capture) sẽ xuất hiện tại đây.",
-                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                 modifier = Modifier.padding(top = 4.dp),
             )
         }

@@ -115,7 +115,7 @@ private fun LoggedInCard(state: AuthUiState, onLogout: () -> Unit) {
             )
             Text(
                 text = "SĐT: ${state.loggedInPhoneNumber}",
-                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
             )
             OutlinedButton(onClick = onLogout, enabled = !state.isLoading) {
                 Text(if (state.isLoading) "Đang đăng xuất..." else "Đăng Xuất")
@@ -142,7 +142,7 @@ private fun OtpCard(state: AuthUiState, onOtpCodeChange: (String) -> Unit, onSub
             )
             Text(
                 text = "Server demo chưa nối SMS thật — mã OTP được ghi vào log server.",
-                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
             )
             OutlinedTextField(
                 value = state.otpCode,

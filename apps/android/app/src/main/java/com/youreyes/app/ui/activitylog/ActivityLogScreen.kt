@@ -161,7 +161,7 @@ private fun ActivityLogItemCard(row: ActivityLogRow) {
             }
             Text(
                 text = row.receivedAtText,
-                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 11.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
             )
             Text(
                 text = row.summary,

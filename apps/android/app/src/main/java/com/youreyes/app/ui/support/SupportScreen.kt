@@ -69,7 +69,7 @@ fun SupportScreen(
         if (!state.isLoggedIn) {
             Text(
                 text = "Đăng nhập ở mục \"Tài Khoản Đăng Nhập\" trong Hồ sơ để gửi yêu cầu hỗ trợ.",
-                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
             )
         }
 
@@ -109,7 +109,7 @@ fun SupportScreen(
                 )
                 Text(
                     text = "${state.messageText.length}/${SupportUiState.MAX_MESSAGE_LENGTH}",
-                    style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 11.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 GradientButton(

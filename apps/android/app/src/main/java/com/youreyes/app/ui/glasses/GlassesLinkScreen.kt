@@ -190,12 +190,12 @@ private fun PairingStatusCard(pairedDeviceId: String) {
             Column {
                 Text(
                     text = if (isPaired) "Đang liên kết" else "Chưa liên kết kính nào",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor, fontSize = 14.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = inkColor),
                 )
                 if (isPaired) {
                     Text(
                         text = "Mã kính: $pairedDeviceId",
-                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                     )
                 }
             }

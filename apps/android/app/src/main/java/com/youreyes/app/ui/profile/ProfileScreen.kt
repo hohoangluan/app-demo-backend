@@ -282,7 +282,7 @@ fun ProfileScreen(
                 if (!preferencesState.isLoggedIn) {
                     Text(
                         text = "Đăng nhập ở mục \"Tài Khoản Đăng Nhập\" bên trên để lưu cài đặt trợ năng.",
-                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor, fontSize = 12.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedColor),
                     )
                 }
 
