@@ -72,6 +72,8 @@ fun ProfileRoute(
     onNavigateToDevTest: () -> Unit = {},
     onNavigateToAuth: () -> Unit = {},
     onNavigateToSupport: () -> Unit = {},
+    onNavigateToDisplay: () -> Unit = {},
+    onNavigateToGlasses: () -> Unit = {},
 ) {
     val overviewViewModel: OverviewViewModel = viewModel()
     val state by overviewViewModel.uiState.collectAsState()
@@ -98,6 +100,8 @@ fun ProfileRoute(
         onNavigateToDevTest = onNavigateToDevTest,
         onNavigateToAuth = onNavigateToAuth,
         onNavigateToSupport = onNavigateToSupport,
+        onNavigateToDisplay = onNavigateToDisplay,
+        onNavigateToGlasses = onNavigateToGlasses,
         preferencesState = preferencesState,
         onFontSizeChange = preferencesViewModel::onFontSizeChange,
         onVoiceChange = preferencesViewModel::onVoiceChange,
@@ -120,6 +124,8 @@ fun ProfileScreen(
     onNavigateToDevTest: () -> Unit = {},
     onNavigateToAuth: () -> Unit = {},
     onNavigateToSupport: () -> Unit = {},
+    onNavigateToDisplay: () -> Unit = {},
+    onNavigateToGlasses: () -> Unit = {},
     preferencesState: PreferencesUiState = PreferencesUiState(),
     onFontSizeChange: (String) -> Unit = {},
     onVoiceChange: (String) -> Unit = {},

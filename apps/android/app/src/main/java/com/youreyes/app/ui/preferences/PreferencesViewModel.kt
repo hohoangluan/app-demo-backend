@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.youreyes.app.fcm.FcmPushReceiver
 import com.youreyes.app.model.PreferencesPayload
 import com.youreyes.app.network.DeviceApiClient
+import com.youreyes.app.ui.theme.DisplaySettings
 import com.youreyes.app.ui.auth.AuthViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -69,6 +70,11 @@ class PreferencesViewModel(application: Application) : AndroidViewModel(applicat
                         hapticsEnabled = data.hapticsEnabled,
                     )
                 }
+                // The account's stored answer wins over whatever this device had
+                // chosen while logged out, so signing in on a new phone brings the
+                // user's own text size and contrast with them.
+                DisplaySettings.setFontSizeOption(data.fontSizeOption)
+                DisplaySettings.setHighContrast(data.highContrast)
             } else {
                 _uiState.update {
                     it.copy(
@@ -81,9 +87,23 @@ class PreferencesViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun onFontSizeChange(value: String) = applyThenSave { it.copy(fontSizeOption = value) }
+    /**
+     * The two display fields are written to [DisplaySettings] before the debounced
+     * save, not after it: the theme has to change on this frame, while the server
+     * round-trip can take as long as it takes. Saving still goes through the same
+     * debounce as every other field.
+     */
+    fun onFontSizeChange(value: String) {
+        DisplaySettings.setFontSizeOption(value)
+        applyThenSave { it.copy(fontSizeOption = value) }
+    }
+
     fun onVoiceChange(value: String) = applyThenSave { it.copy(voiceOption = value) }
-    fun onHighContrastChange(value: Boolean) = applyThenSave { it.copy(highContrast = value) }
+
+    fun onHighContrastChange(value: Boolean) {
+        DisplaySettings.setHighContrast(value)
+        applyThenSave { it.copy(highContrast = value) }
+    }
     fun onHapticsChange(value: Boolean) = applyThenSave { it.copy(hapticsEnabled = value) }
 
     /** Coalesces a burst of rapid taps into the single PUT that matters — see [applyThenSave]. */
