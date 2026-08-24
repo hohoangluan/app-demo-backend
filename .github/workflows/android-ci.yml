@@ -37,6 +37,45 @@ jobs:
         working-directory: apps/android
         run: chmod +x gradlew
 
+      - name: Provide CI-only placeholder Firebase config
+        # google-services.json is intentionally gitignored (per-developer Firebase project
+        # config, never committed — see .gitignore). The Google Services Gradle plugin still
+        # requires *a* well-formed file to exist at build time to generate resources, even
+        # though this CI job never talks to a real Firebase project (no connectedAndroidTest).
+        # This synthetic file contains no real project data or secret — package_name must match
+        # applicationId ("com.youreyes.app") for the plugin to accept it.
+        working-directory: apps/android
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "ci-placeholder-project",
+              "storage_bucket": "ci-placeholder-project.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.youreyes.app"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  { "current_key": "AIzaCiPlaceholderNotARealKey00000000000" }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
       - name: Run Android quality gates
         working-directory: apps/android
         run: ./gradlew test lint assembleDebug --no-daemon
