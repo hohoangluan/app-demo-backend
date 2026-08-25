@@ -29,6 +29,35 @@ android {
                 ?: "3ba55c4b05cf489085e7461dff9d023a"
             )
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"$spotifyClientId\"")
+
+        // ── Server Kính ───────────────────────────────────────────────────
+        //
+        // Địa chỉ + mã truy cập của Server Kính (cổng 8000 / tunnel Cloudflare).
+        //
+        // 🔴 Trước 2026-08-25 hai giá trị này là HAI Ô NHẬP trên màn hình kính,
+        // và người dùng phải tự gõ. Người dùng chốt: app chỉ phơi ra ĐỔI WI-FI
+        // và CẬP NHẬT FIRMWARE, còn lại giấu ở backend. Một người khiếm thị
+        // không có lý do gì phải biết một URL và một chuỗi bí mật.
+        //
+        // Đổi theo máy: đặt glassesServerUrl=... / glassesServerToken=... trong
+        // local.properties (không commit).
+        val glassesServerUrl = (
+            project.findProperty("glassesServerUrl") as String?
+                ?: "https://api.visioncare-host.uk"
+            )
+        buildConfigField("String", "GLASSES_SERVER_URL", "\"$glassesServerUrl\"")
+
+        // 🔴 Đây LÀ một chuỗi bí mật, khác hẳn client id của Spotify ở trên.
+        // Nó nằm trong APK nghĩa là ai mở APK ra cũng đọc được — tức mọi chiếc
+        // kính đang dùng chung một mã, và mã đó coi như công khai. Chấp nhận
+        // được cho bản chạy thử; TRƯỚC KHI PHÁT HÀNH phải đổi sang mã cấp theo
+        // từng tài khoản, lấy về sau khi đăng nhập. Xem câu hỏi #5/#9 ở
+        // CLAUDE.md của server kính.
+        val glassesServerToken = (
+            project.findProperty("glassesServerToken") as String?
+                ?: "visioncare-secret-token"
+            )
+        buildConfigField("String", "GLASSES_SERVER_TOKEN", "\"$glassesServerToken\"")
         // Must match a redirect URI registered in the Spotify developer dashboard.
         val spotifyScheme = "youreyes"
         val spotifyHost = "spotify-callback"
