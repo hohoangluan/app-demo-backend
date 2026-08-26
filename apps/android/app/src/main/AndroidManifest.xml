@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- ── Phone & Contacts ─────────────────────────────────────────── -->
     <!-- emergency_call, contact_call: dial/call phone number -->
@@ -25,6 +26,37 @@
     <!-- emergency_call runs from a background FCM push, not the foreground app;
          without this, LocationManager silently returns no last-known fix there -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- ── Bluetooth LE: cấp Wi-Fi cho kính khi kính mất mạng (T26) ──── -->
+    <!-- Đường CỨU HỘ. Hai đường kia đều có một điều kiện không thoả đúng lúc
+         hỏng: qua máy chủ cần kính ĐANG online, qua SoftAP bắt người dùng RỜI
+         mạng của họ. BLE không đòi cái nào. Xem GlassesBleProvisioner.kt. -->
+
+    <!-- Android 12+ (API 31). `neverForLocation` là lời cam kết KHÔNG dùng kết
+         quả quét để suy ra vị trí — nhờ nó mà quét không phải xin quyền vị trí.
+         Bỏ thuộc tính này thì Android bắt xin ACCESS_FINE_LOCATION trở lại, và
+         người dùng thấy app hỏi vị trí để... đổi Wi-Fi cho kính. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="s" />
+
+    <!-- Android 6-11 (minSdk 24). Hai quyền cũ bị hệ thống thu hồi từ API 31,
+         nên chặn trần bằng maxSdkVersion — không chặn thì một số máy đòi quyền
+         không cần thiết. -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <!-- 🔴 Trên API 23-30, quét BLE THIẾU quyền vị trí thì startScan() chạy
+         bình thường và KHÔNG BAO GIỜ gọi callback nào — không lỗi, không log.
+         Nhìn từ ngoài giống hệt "kính không bật BLE". ACCESS_FINE_LOCATION đã
+         khai ở trên cho navigation_start, dùng chung. -->
+
+    <!-- Máy không có BLE vẫn cài được: mọi chức năng khác không cần nó, và hai
+         đường cấp Wi-Fi kia vẫn chạy. -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <!-- ── Overlay / Display ────────────────────────────────────────── -->
     <!-- display_show: render overlay notifications on top of other apps -->

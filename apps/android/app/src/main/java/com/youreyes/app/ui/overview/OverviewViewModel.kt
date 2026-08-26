@@ -114,7 +114,7 @@ class OverviewViewModel(application: Application) : AndroidViewModel(application
                         )
                     }
                 } else {
-                    val err = result.exceptionOrNull()?.message ?: "Unknown error"
+                    val err = result.exceptionOrNull()?.message ?: "Lỗi không rõ nguyên nhân"
                     _uiState.update {
                         it.copy(isLoading = false, registrationMessage = "❌ Lỗi: $err")
                     }

@@ -8,6 +8,7 @@ import com.youreyes.app.BuildConfig
 import com.youreyes.app.fcm.FcmPushReceiver
 import com.youreyes.app.model.GlassesLinkPayload
 import com.youreyes.app.network.DeviceApiClient
+import com.youreyes.app.network.GlassesBleProvisioner
 import com.youreyes.app.network.GlassesServerClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,7 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
         FcmPushReceiver.PREFS_NAME, Context.MODE_PRIVATE
     )
     private val glassesServer = GlassesServerClient()
+    private val ble = GlassesBleProvisioner(application)
 
     private val _uiState = MutableStateFlow(loadInitialState())
     val uiState: StateFlow<GlassesLinkUiState> = _uiState.asStateFlow()
@@ -107,7 +109,7 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 refreshStatus()
             } else {
-                val err = result.exceptionOrNull()?.message ?: "Unknown error"
+                val err = result.exceptionOrNull()?.message ?: "Lỗi không rõ nguyên nhân"
                 _uiState.update { it.copy(isLoading = false, message = "❌ Lỗi: $err") }
             }
         }
@@ -144,7 +146,7 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
             } else {
-                val err = result.exceptionOrNull()?.message ?: "Unknown error"
+                val err = result.exceptionOrNull()?.message ?: "Lỗi không rõ nguyên nhân"
                 _uiState.update { it.copy(isLoading = false, message = "❌ Lỗi: $err") }
             }
         }
@@ -244,6 +246,26 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
             // mất mạng, và bỏ nó là lặp lại đúng lỗi `wifiProvisionClear()` bên
             // firmware: một đường cứu hộ được ghi trong tài liệu mà không tồn
             // tại trong mã.
+            //
+            // 🔴 ĐỔI 2026-08-26: BA đường, không phải hai. BLE chen vào GIỮA.
+            //
+            //   kính đang poll /downlink  -> qua máy chủ (kính ở đâu cũng tới)
+            //   không, nhưng thấy BLE     -> BLE  (điện thoại GIỮ NGUYÊN mạng)
+            //   không thấy BLE            -> SoftAP "VisionCare-Setup"
+            //
+            // Vì sao BLE đứng trên SoftAP: đường SoftAP bắt người dùng RỜI mạng
+            // của họ để nối vào một mạng lạ không Internet, rồi nhớ quay lại.
+            // Với người khiếm thị, "vào Cài đặt → Wi-Fi → chọn mạng lạ" là chỗ
+            // bỏ cuộc. BLE không đụng tới mạng của điện thoại.
+            //
+            // Vì sao BLE KHÔNG đứng trên đường máy chủ: kính chỉ quảng bá BLE
+            // khi nó KHÔNG có mạng, nên khi đường máy chủ dùng được thì BLE
+            // chắc chắn không có gì để thấy — thử nó trước chỉ tốn 40 giây quét.
+            //
+            // 🔴 KHÔNG bỏ nhánh SoftAP đi. Nó là lưới cuối khi Bluetooth tắt,
+            // máy không có BLE, hoặc người dùng từ chối quyền — và bỏ nó là lặp
+            // lại đúng lỗi cũ: một đường cứu hộ có trong tài liệu mà không có
+            // trong mã.
             val viaServer = state.status?.downlinkOpen == true
             val result = if (viaServer) {
                 glassesServer.setWifi(
@@ -254,11 +276,7 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                     password = state.wifiPassword,
                 )
             } else {
-                glassesServer.localSetWifi(
-                    GlassesLinkUiState.DEFAULT_SETUP_HOST,
-                    state.wifiSsid.trim(),
-                    state.wifiPassword,
-                )
+                sendWifiOffline(state.wifiSsid.trim(), state.wifiPassword)
             }
 
             result.fold(
@@ -284,6 +302,40 @@ class GlassesLinkViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 },
             )
+        }
+    }
+
+    /**
+     * Kính không còn giữ kênh xuống: thử BLE trước, rơi về SoftAP nếu không được.
+     *
+     * Trả về `Result` để chỗ gọi xử lý chung với đường máy chủ. Câu lỗi ở đây
+     * cố ý nói NGƯỜI DÙNG PHẢI LÀM GÌ, không mô tả lỗi kỹ thuật — màn hình này
+     * được đọc lên bằng TalkBack.
+     */
+    private suspend fun sendWifiOffline(ssid: String, password: String): Result<Unit> {
+        _uiState.update { it.copy(message = "Đang tìm kính qua Bluetooth...") }
+
+        return when (val r = ble.provision(ssid, password)) {
+            is GlassesBleProvisioner.Result.Saved -> Result.success(Unit)
+
+            // 🔴 Ba ca dưới đây đều RƠI VỀ SoftAP chứ không báo lỗi. Người dùng
+            // chỉ cần mạng được đổi; đường nào làm được thì đi đường đó.
+            is GlassesBleProvisioner.Result.NotFound,
+            is GlassesBleProvisioner.Result.Unavailable,
+            is GlassesBleProvisioner.Result.MissingPermissions -> {
+                _uiState.update {
+                    it.copy(message = "Không thấy kính qua Bluetooth — thử qua mạng cài đặt...")
+                }
+                glassesServer.localSetWifi(
+                    GlassesLinkUiState.DEFAULT_SETUP_HOST, ssid, password
+                )
+            }
+
+            // Ca này thì KHÔNG rơi về: BLE đã nối được và đã ghi, nên kính rất
+            // có thể ĐÃ nhận và đang khởi động lại. Thử tiếp qua SoftAP lúc này
+            // là gửi lần thứ hai vào một chiếc kính đang reboot — và câu báo sẽ
+            // nói dối theo cả hai chiều. Nói đúng thứ ta biết.
+            is GlassesBleProvisioner.Result.Failed -> Result.failure(Exception(r.reason))
         }
     }
 
