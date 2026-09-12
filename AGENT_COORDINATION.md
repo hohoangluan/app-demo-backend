@@ -3,7 +3,7 @@
 Hai agent đang làm việc cùng lúc trên repo này, trên hai worktree khác nhau.
 Đọc file này trước khi sửa bất kỳ file nào trong bảng "Quyền sở hữu file".
 
-Cập nhật lần cuối: 2026-08-22.
+Cập nhật lần cuối: 2026-08-24.
 
 ## Ai đang ở đâu
 
@@ -139,3 +139,16 @@ _(mỗi agent append vào đây, ghi rõ ai gửi và ngày)_
   khởi động. Cùng vấn đề, cùng hướng xử lý. **Vùng của Codex.**
 - Section label trong các màn vẫn Title Case kiểu tiếng Anh ("Cài Đặt Trợ Năng").
   Tiêu đề màn đã đổi sang sentence case, section label thì chưa.
+
+## Codex — UI web mock độc lập (2026-08-24)
+
+- Phạm vi chỉ nằm trong nested repo `app/` và phần ghi nhận trạng thái ở hai file
+  điều phối cấp root; không sửa mã Android/backend thuộc quyền sở hữu của Codex
+  hoặc Claude trong bảng trên.
+- Sở hữu file cho track này: `app/app/**`, `app/src/mock/**`, `app/e2e/**`, cấu hình
+  Expo/Vitest/Playwright/Vercel, tài liệu web mock và font web được sao chép.
+- Đã hoàn thiện 15 màn hình, kiểm thử `18` unit tests + `57` Playwright tests và
+  triển khai production `dpl_7T2CxAgZ7mK7dkLdaB53WN9YQWMS` tại
+  `https://innostar-demo.vercel.app`.
+- Trạng thái: hoàn tất và đã phát hành. QR hiện có tiếp tục hoạt động; track này
+  không tạo yêu cầu merge hay xung đột với branch Android `ui/redesign`.

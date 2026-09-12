@@ -3,7 +3,7 @@
 > Tracker bá» n vá»¯ng qua nhiá» u session. Cáº­p nháº­t file nÃ y sau má»—i thay Ä‘á»•i cÃ³ Ã½ nghÄ©a.
 > Nguá»“n contract: `project_context.md`. Blueprint: `architeture.md`. Quy tá## Trạng thái hiện tại
 
-- Ngày cập nhật: 2026-08-19
+- Ngày cập nhật: 2026-08-24
 - Phase hiện tại: **P0-P5 đã hoàn tất (FCM thực tế)**; **P6 — mở rộng màn hình Android
   theo cấu trúc backend hiện có** gần xong: 5/6 mục đã làm (Activity Log, Auth thật,
   Preferences thật, Support ticket, hủy liên kết kính), chỉ còn 1 mục thấp ưu tiên
@@ -504,6 +504,38 @@ Ghi chÃ­nh xÃ¡c lá»‡nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng Ä‘�
   blocked by the T18 board/RAM prerequisite. The emulator also has no persisted
   production device registration, so its live event correctly stopped before
   HTTP with a non-sensitive warning.
+
+
+## UI web mock độc lập (không thuộc phase Android/backend)
+
+- [x] Tạo web mock riêng trong nested repo `app/`, mô phỏng đủ 15 màn hình của
+  giao diện Android hiện tại và không thay đổi runtime Android/backend.
+- [x] Toàn bộ dữ liệu và hành động là state cục bộ; không gọi API, FCM, callback,
+  quyền thiết bị hoặc native intent. SOS chỉ hiển thị phản hồi mô phỏng sau 3 lần nhấn.
+- [x] Hỗ trợ điều hướng Back, khôi phục focus, cỡ chữ, tương phản cao và chế độ
+  nhà phát triển sau 7 lần chạm phiên bản.
+- [x] Xuất bản production tại `https://innostar-demo.vercel.app`; QR hiện có trong
+  `app/qr.png` tiếp tục dùng nguyên URL này nên không cần tạo hoặc in lại QR.
+
+### Quality-gate evidence cho UI web mock
+
+| Ngày | Lệnh / kiểm tra | Kết quả |
+|---|---|---|
+| 2026-08-24 | `npm test -- --run` | PASS — 4 files, 18 tests |
+| 2026-08-24 | `npm run typecheck` | PASS |
+| 2026-08-24 | `npm run e2e` | PASS — 57 tests, desktop 1280x900 và mobile 390x844 / 360x800 |
+| 2026-08-24 | `npx vercel --prod --yes` | PASS — deployment `dpl_7T2CxAgZ7mK7dkLdaB53WN9YQWMS`, READY, production alias cập nhật |
+
+### 2026-08-24 — Session 8 (UI web mock độc lập)
+
+- Hoàn thiện bộ UI web mock 15 route theo đặc tả tại
+  `app/docs/superpowers/specs/2026-08-24-android-ui-web-mock-design.md`.
+- Thêm test reducer/state, typecheck và Playwright cho toàn bộ route, hành động
+  mô phỏng, không phát sinh request ngoài origin, focus khi Back và chống tràn ở
+  cỡ chữ lớn nhất.
+- Triển khai lên Vercel project `innostar-demo`, giữ nguyên URL đích của QR cũ.
+- Track này tách biệt hoàn toàn với kế hoạch Android/backend; không sửa hành vi,
+  API, database, worker hoặc mã native Android hiện tại.
 
 
 ## Protocol tiếp tục ở session mới
