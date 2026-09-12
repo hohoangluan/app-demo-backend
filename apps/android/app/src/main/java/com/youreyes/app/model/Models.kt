@@ -15,6 +15,9 @@ enum class ActionType(val value: String) {
     EMERGENCY_CALL("emergency_call"),
     CONTACT_CALL("contact_call"),
     LOCATION_GET("location_get"),
+    CAPABILITIES_GET("capabilities_get"),
+    CALL_ANSWER("call_answer"),
+    CALL_REJECT("call_reject"),
 
     // Additional local-demo-only actions (no backend counterpart yet)
     QUOTES_SPEAK("quotes_speak"),
@@ -38,6 +41,20 @@ data class DeviceRegisterPayload(
     val deviceId: String,
     val platform: String = "android",
     val pushToken: String
+)
+
+/** T19 privacy boundary: this object can never carry a full phone number. */
+data class IncomingCallerPayload(
+    val contactId: String? = null,
+    val name: String? = null,
+    val numberTail: String? = null,
+    val duplicateName: Boolean = false,
+)
+
+data class DeviceEventPayload(
+    val deviceId: String,
+    val type: String,
+    val caller: IncomingCallerPayload? = null,
 )
 
 // Pairs a glasses hardware device_id (a separate id space from the Android
@@ -101,6 +118,62 @@ data class CommandRecord(
     val status: String,
     val resultJson: String? = null,
     val errorJson: String? = null
+)
+
+// -- Demo phone-app auth (apps/backend/src/app/api/auth.py): register -> OTP verify,
+// or login -- both unauthenticated; only /auth/logout needs the session it issues. --
+
+data class AuthRegisterPayload(
+    val phoneNumber: String,
+    val password: String,
+    val displayName: String? = null,
+)
+
+data class AuthOtpVerifyPayload(
+    val phoneNumber: String,
+    val otpCode: String,
+)
+
+data class AuthLoginPayload(
+    val phoneNumber: String,
+    val password: String,
+)
+
+/** Result of POST /auth/register: the account exists but still needs OTP verification. */
+data class AuthRegisterResult(
+    val userId: String,
+    val publicUserId: String,
+    val phoneNumber: String,
+)
+
+/** An issued session (POST /auth/otp/verify or /auth/login) -- the raw token is returned exactly once. */
+data class AuthSession(
+    val accessToken: String,
+    val userId: String,
+    val publicUserId: String,
+    val phoneNumber: String,
+    val displayName: String?,
+)
+
+/**
+ * Accessibility preferences (apps/backend/src/app/schemas/preferences.py).
+ * `fontSizeOption` must be one of `"Nhỏ" | "Vừa" | "To"`, `voiceOption` one of
+ * `"Giọng Nữ" | "Giọng Nam"` — the server validates these as fixed enums (`extra`
+ * values are a 400, not silently accepted), so the client must send these exact
+ * strings, not e.g. "Lớn" for large.
+ */
+data class PreferencesPayload(
+    val fontSizeOption: String,
+    val voiceOption: String,
+    val highContrast: Boolean,
+    val hapticsEnabled: Boolean,
+)
+
+/** Result of POST /support/tickets (apps/backend/src/app/schemas/support.py). */
+data class SupportTicketResult(
+    val id: String,
+    val category: String,
+    val createdAt: String,
 )
 
 data class PendingReportRecord(

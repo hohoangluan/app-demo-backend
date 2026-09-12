@@ -47,7 +47,7 @@ class FunctionTestViewModel(application: Application) : AndroidViewModel(applica
                             .toString(2) to true
                     }
                 },
-                onFailure = { error -> "Unexpected error: ${error.message}" to true },
+                onFailure = { error -> "Lỗi không lường trước: ${error.message}" to true },
             )
 
             _rows.update { list ->

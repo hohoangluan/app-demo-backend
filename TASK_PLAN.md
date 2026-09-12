@@ -3,8 +3,13 @@
 > Tracker bá» n vá»¯ng qua nhiá» u session. Cáº­p nháº­t file nÃ y sau má»—i thay Ä‘á»•i cÃ³ Ã½ nghÄ©a.
 > Nguá»“n contract: `project_context.md`. Blueprint: `architeture.md`. Quy tá## Trạng thái hiện tại
 
-- Ngày cập nhật: 2026-08-03
-- Phase hiện tại: **TOÀN BỘ PHASES (P0-P5) ĐÃ HOÀN TẤT VÀ TÍCH HỢP FCM THỰC TẾ**.
+- Ngày cập nhật: 2026-08-24
+- Phase hiện tại: **P0-P5 đã hoàn tất (FCM thực tế)**; **P6 — mở rộng màn hình Android
+  theo cấu trúc backend hiện có** gần xong: 5/6 mục đã làm (Activity Log, Auth thật,
+  Preferences thật, Support ticket, hủy liên kết kính), chỉ còn 1 mục thấp ưu tiên
+  (widget trạng thái nhạc/điều hướng trên Overview). Đã đổi nhánh làm việc thành
+  **`ui/vphoa`** (đổi tên từ `ui/new` theo yêu cầu người phối hợp — cùng lịch sử
+  commit). Xem chi tiết ở mục P6 bên dưới.
 - Thành tựu chính:
   - Backend: 9/9 Public APIs + 2 Internal Device APIs + Workers (Delivery, Timeout, Callback) + FCM Real Transport adapter (`firebase-admin`). Pass 197 unit/API tests + E2E simulation script trên PostgreSQL container.
   - Android: Package đổi sang `com.youreyes.app` cho khớp Firebase. Tích hợp FCM Push Receiver (`FcmPushReceiver`) tự động re-register FCM token. Cài đặt đầy đủ 9 Native Action Handlers (YouTube Music cho `media_play`, Google Maps cho `navigation_start`, Native Call/Camera/Volume/Settings/Overlay). `gradlew.bat assembleDebug` BUILD SUCCESSFUL.
@@ -109,6 +114,239 @@
 - [x] Seed/reset scripts, demo script và troubleshooting guide (demo_e2e_simulation.py verified end-to-end).
 - [x] Quality gates and build integrity verified.
 
+
+## P6 — Android UI: mở rộng màn hình theo cấu trúc backend
+
+Task giao bởi hohoangluan qua kênh khác (không phải qua TASK_PLAN gốc): "làm phần giao diện
+cho app android ... để cho app hoàn chỉnh hơn". Đối chiếu 5 API group đã có ở
+`apps/backend/src/app/api` (`auth`, `preferences`, `support`, `glasses`, `device`) với
+UI hiện có trong `apps/android`, các màn hình còn thiếu được xếp việc theo thứ tự:
+
+- [x] **Activity Log** — màn hình lịch sử lệnh kính đã gửi tới điện thoại (đặt xe, nhạc,
+  điều hướng, khẩn cấp, gọi liên hệ...), đọc trực tiếp bảng `commands` có sẵn qua
+  `AppDatabaseHelper.getAllCommands()` — không cần đổi backend. File mới:
+  `ui/activitylog/ActivityLogUiState.kt` (pure mapping `CommandRecord -> ActivityLogRow`,
+  unit-testable), `ActivityLogViewModel.kt`, `ActivityLogScreen.kt`; test mới
+  `ActivityLogUiStateTest.kt` (9 test: label theo action, fallback action lạ, 3 trạng thái
+  status kể cả status lạ, JSON lỗi định dạng không crash, `isEmpty`). Nối điều hướng: thêm
+  `RowCard` mới trên `OverviewScreen`, thêm tab ẩn (`selectedTab = 6`) trong
+  `MainActivity.AppRoot`. Không đổi `CommunityScreen`/`FeaturesScreen` (không có model
+  backend hậu thuẫn "cộng đồng"; `FeaturesScreen`'s `onClick = null` là chủ đích — tính
+  năng do kính tự kích hoạt qua giọng nói, không phải bấm từ điện thoại).
+- [x] **Auth thật** (đăng ký/OTP/đăng nhập/đăng xuất, `POST /auth/register`,
+  `/auth/otp/verify`, `/auth/login`, `/auth/logout`) + nối identity thật vào
+  Profile/GlassesLink theo quyết định người dùng (phương án B: "Auth + nối luôn
+  identity thật vào Profile/GlassesLink", chọn qua AskUserQuestion sau khi phát hiện
+  mâu thuẫn tài liệu — `docs/superpowers/specs/2026-08-03-glasses-pairing-design.md`
+  §10 đã chấp nhận rủi ro "chưa có login thật" cho `/device/glasses/link`, nhưng
+  `/auth/*` + `/device/link` (session-gated) đã được thêm sau đó mà Android chưa từng
+  gọi tới). **Không đổi** cơ chế xác thực của `/device/register`/`/device/glasses/link`
+  (vẫn Device Bearer token dùng chung, đúng theo đánh đổi đã duyệt) — chỉ đổi *giá trị*
+  `user_id` truyền vào các lệnh gọi đó, lấy từ tài khoản thật thay vì ô tự gõ.
+  - File mới: `ui/auth/AuthUiState.kt` (validate số điện thoại ≥8 chữ số/mật khẩu
+    ≥6 ký tự khớp `app/schemas/auth.py`, unit-testable), `AuthViewModel.kt` (lưu
+    session vào `SharedPreferences` key riêng `auth_*`, đồng thời ghi đè
+    `FcmPushReceiver.KEY_USER_ID` bằng `public_user_id` thật), `AuthScreen.kt`
+    (toggle Đăng nhập/Đăng ký → bước OTP → trạng thái đã đăng nhập + nút Đăng xuất).
+  - `DeviceApiClient.kt`: 4 method mới (`registerAccount`, `verifyOtp`, `login`,
+    `logout`) qua 2 helper private mới (`postJson`/`readBody`), không đụng 3 method
+    cũ (`registerDevice`/`sendReport`/`linkGlassesDevice`).
+  - **Vấn đề "ViewModel đọc SharedPreferences 1 lần lúc khởi tạo, không tự cập nhật
+    khi đổi tab" đã xử lý**: thêm `refreshUserId()` vào `OverviewViewModel` và
+    `GlassesLinkViewModel`, gọi qua `LaunchedEffect(Unit)` mỗi khi `OverviewRoute`/
+    `ProfileRoute`/`GlassesLinkRoute` được vào lại — nếu không có bước này, đăng nhập
+    xong quay lại tab Trang chủ/Hồ sơ/Pairing kính vẫn hiện `user_id` cũ do
+    `AndroidViewModel` được Compose cache theo vòng đời Activity, không phải theo tab.
+  - Test mới `AuthUiStateTest.kt` (7 test: boundary số điện thoại/mật khẩu, số điện
+    thoại có dấu gạch/khoảng trắng vẫn đếm đúng chữ số, OTP rỗng, đang loading,
+    `isLoggedIn`). Không unit-test `AuthViewModel`/`DeviceApiClient` trực tiếp — nhất
+    quán với toàn bộ `AndroidViewModel`/network method khác trong repo (không có
+    Robolectric/MockWebServer, chỉ UiState thuần được test).
+  - Nối navigation: `ProfileScreen` thêm `RowCard` "Tài Khoản Đăng Nhập" đầu trang
+    (trước mục "Cấu Hình Số Khẩn Cấp"), tab mới `selectedTab = 7` trong
+    `MainActivity.AppRoot`.
+- [x] **Nối `GET/PUT /preferences` thật** cho khối "Cài Đặt Trợ Năng" ở Profile, thay
+  hoàn toàn `remember { mutableStateOf(...) }` cục bộ trước đó. **Tìm thấy và sửa 1 lỗi
+  contract có sẵn khi wiring**: UI cũ dùng chip "Lớn" cho cỡ chữ, nhưng
+  `app/schemas/preferences.py`'s `FontSizeOption = Literal["Nhỏ","Vừa","To"]` — gửi
+  "Lớn" sẽ bị server từ chối 400. Đã sửa về đúng `"To"`.
+  - File mới: `ui/preferences/PreferencesUiState.kt` (`FONT_SIZE_OPTIONS`/
+    `VOICE_OPTIONS` là nguồn duy nhất cho domain hợp lệ, `canEdit` chỉ true khi đã đăng
+    nhập và không đang loading), `PreferencesViewModel.kt` (load khi có session, mỗi
+    thay đổi field lưu ngay lập tức — 4 field nhỏ, không cần nút Lưu riêng).
+  - `DeviceApiClient.kt`: generalize `postJson` private cũ (viết ở task Auth) thành
+    `requestJson` hỗ trợ GET/PUT, thêm `getPreferences`/`updatePreferences`. 3 method
+    Device Bearer token gốc và 4 method Auth không đổi hành vi.
+  - `ProfileScreen`: bỏ toàn bộ `remember` cục bộ của khối trợ năng, dùng
+    `PreferencesViewModel` qua `viewModel()` (giống pattern `OverviewViewModel`);
+    `ChipButton` private thêm tham số `enabled` (chưa có trước đó) để khoá UI khi chưa
+    đăng nhập; hiện thông báo "Đăng nhập để lưu cài đặt" khi `!isLoggedIn`.
+  - Test mới `PreferencesUiStateTest.kt` (5 test: `canEdit` theo 3 tổ hợp
+    logged-in/loading, đúng danh sách `FONT_SIZE_OPTIONS`/`VOICE_OPTIONS` — có test
+    regression xác nhận không còn "Lớn" sai).
+- [x] **Màn hình gửi yêu cầu hỗ trợ** (`POST /support/tickets`, session-gated giống
+  preferences). File mới: `ui/support/SupportUiState.kt` (`CATEGORIES` là nguồn duy
+  nhất cho domain `Literal["feedback","support_request"]`, `canSubmit` kiểm cả độ dài
+  tin nhắn khớp `max_length=2000` server-side), `SupportViewModel.kt`,
+  `SupportScreen.kt` (chip chọn loại + textarea + đếm ký tự). `DeviceApiClient` thêm
+  `submitSupportTicket`. `ProfileScreen` thêm RowCard "Hỗ Trợ & Góp Ý", tab mới
+  `selectedTab = 8`. Test mới `SupportUiStateTest.kt` (6 test: logged-out, message
+  rỗng, quá 2000 ký tự, đang loading, đúng thứ tự category).
+- [x] **Hủy liên kết kính** (`POST /device/glasses/unlink`, cùng Device Bearer token
+  với `/link`, idempotent — không lỗi nếu không có gì để hủy). Thêm
+  `GlassesLinkUiState.canUnlink` (không cần `glassesDeviceId`, khác `canSubmit`),
+  `GlassesLinkViewModel.unlink()`, nút "Hủy Liên Kết Kính Hiện Tại" trong
+  `GlassesLinkScreen`. **Tiện sửa luôn 1 lỗi UI có sẵn phát hiện khi đụng đúng dòng
+  này**: `state.message` trước đó luôn hiện màu xanh (`YourEyesSuccess`) kể cả khi nội
+  dung là lỗi (bắt đầu bằng "❌") — đổi màu theo tiền tố. Test mới: 3 case cho
+  `canUnlink` thêm vào `GlassesLinkUiStateTest.kt` hiện có.
+- [ ] (Thấp ưu tiên) Widget trạng thái nhạc/điều hướng đang chạy trên Overview.
+
+Ghi chú kiến trúc phát hiện được: hệ thống này ("App Communication Server") là
+**trung gian** giữa Server Kính (external, ngoài phạm vi — xem
+`docs/glasses-server-client-api.md` §"Ngoài phạm vi") và app Android, KHÔNG PHẢI bản thân
+Server Kính. `base URL` mặc định (`OverviewViewModel.DEFAULT_SERVER_URL`) và package
+Android (`com.youreyes.app`) xác nhận đây cùng hệ sinh thái "Your Eyes" với repo
+`your-eyes-project/backend`, nhưng là 2 backend riêng — cần xác nhận với hohoangluan xem
+tính năng `dispatch_kinh_action` bên `backend/` (billing) có bị trùng vai trò với hệ thống
+này hay không trước khi phát triển thêm cả hai song song.
+
+- [x] **Rà soát toàn bộ (session 6, theo yêu cầu người dùng "kiểm tra 1 lần nữa")**:
+  đọc lại 26 file đã đổi, đối chiếu field JSON với schema backend. Tìm và sửa 1 race
+  condition thật trong `PreferencesViewModel`: bấm nhanh liên tiếp nhiều lựa chọn gửi
+  nhiều PUT chồng nhau, response về sai thứ tự có thể khiến server lưu sai giá trị
+  cuối cùng (UI vẫn đúng, nhưng load lại sẽ "revert" âm thầm) — sửa bằng debounce
+  400ms (`pendingSaveJob`, cancel job cũ trước khi delay+save job mới).
+  **Verify bằng backend thật, không chỉ đọc code**: dựng `docker compose` local
+  (port 8001, vì 8000 bị 1 container khác trên máy chiếm), chạy `alembic upgrade
+  head`, rồi gọi trực tiếp toàn bộ endpoint mới bằng đúng token/field mà
+  `DeviceApiClient` gửi — `/auth/register`→`/otp/verify`→`/login`→`/logout`,
+  `GET`/`PUT /preferences`, `POST /support/tickets`, `POST /device/glasses/link`+
+  `/unlink` (kiểm cả idempotent, gọi 2 lần), `POST /device/register` — tất cả khớp
+  chính xác với response schema thật.
+- [x] **Thêm Spotify song song YouTube Music** cho `music_play` (quyết định người
+  dùng qua AskUserQuestion, 2026-08-21): ưu tiên Spotify nếu đã cài
+  (`isSpotifyInstalled`, cần khai báo `<package>` trong `AndroidManifest.xml`
+  `<queries>` do giới hạn package visibility Android 11+), fallback YouTube Music
+  nếu không. Spotify không có endpoint intent "phát 1 bài qua tìm kiếm" như
+  `INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH` của YouTube Music, nên chỉ mở tới màn hình
+  tìm kiếm (`https://open.spotify.com/search/<query>`) rồi dùng lại đúng cơ chế
+  "nudge" qua Media Session sẵn có (`pressPlayOnActiveSession`, nay nhận thêm tham số
+  `preferredPackage`) — không đảm bảo tự phát 100% hands-free như YouTube Music.
+  Đường đáng tin cậy hơn (Spotify App Remote SDK) cần Client ID từ Spotify Developer
+  Dashboard của team — chưa làm, chờ nếu cần. `music_stop`/`music_volume` không đổi
+  (đã provider-agnostic từ trước, dùng `AudioManager` thuần). Không thêm test JVM cho
+  `isSpotifyInstalled` — cần `PackageManager` thật, nhất quán với toàn bộ phần
+  context-dependent khác của `ActionRegistry` (không có Robolectric trong repo này).
+
+- [x] **Tham khảo Rokid Glasses (video + ảnh chụp màn hình + trang sản phẩm
+  droidshop.vn, 2026-08-21/22)** — người dùng xác nhận giữ nguyên giao diện hiện tại
+  (không đổi theo Rokid), chỉ bổ sung tính năng còn thiếu. Chọn qua AskUserQuestion 2
+  nhóm:
+  - **Nhóm A (thuần frontend, làm ngay)** — cả 2 mục được chọn:
+    - **Album Ảnh & Video** (`ui/album/`): liệt kê ảnh chụp qua `camera_capture` từ
+      MediaStore, lọc theo prefix tên file `YourEyes_` — không cần quyền
+      `READ_MEDIA_IMAGES` vì mọi ảnh đều do chính app `insert()` (Android Scoped
+      Storage luôn cho app đọc lại media do chính nó sở hữu). **Sửa luôn
+      `CameraCaptureHandler`** khi đụng đúng chỗ: (1) gắn `EXTRA_OUTPUT` với tên file
+      có prefix để Album lọc được, (2) phát hiện bug có sẵn — handler dùng
+      `context.startActivity()` trực tiếp thay vì `launchUiIntent` như mọi handler
+      khác, nghĩa là camera_capture có thể bị Android âm thầm chặn khi trigger từ
+      push nền (cùng loại bug các handler khác đã né) — đã sửa dùng đúng
+      `launchUiIntent`. Thêm dependency mới `io.coil-kt.coil3:coil-compose:3.2.0` để
+      hiển thị lưới ảnh (chưa có thư viện load ảnh nào trong repo trước đó).
+    - **Hướng Dẫn Sử Dụng** (`ui/guide/`): danh sách FAQ dạng accordion, nội dung tĩnh
+      mô tả từng luồng thật đã có trong app (đăng nhập, pairing kính, SOS, lịch sử
+      hoạt động, album, cài đặt trợ năng, hỗ trợ).
+  - **Nhóm B (cần action mới ở backend — "làm UI mock trước")**:
+    - **Dịch Thuật** (`ui/translation/`): giả lập STT+dịch bằng câu mẫu có sẵn sau
+      1.5s delay khi bấm mic, có đổi chiều ngôn ngữ. Chưa có action `translate` nào
+      trong contract Public API — hiện `DemoBanner` rõ ràng.
+    - **Biên Bản Họp** (`ui/meeting/`): giả lập ghi âm + phiên âm theo thời gian thực
+      (thêm dòng transcript mẫu mỗi 4 giây), lưu danh sách biên bản trong bộ nhớ (mất
+      khi tắt app — nội dung toàn bộ là giả nên cố tình không lưu). Cũng hiện
+      `DemoBanner`.
+    - Thêm component dùng chung `DemoBanner` (`ui/components/Components.kt`) cho cả 2
+      màn hình, tránh trông giống tính năng thật đang hoạt động.
+  - Nối navigation: 4 `RowCard` mới trên `OverviewScreen`, tab `selectedTab = 9..12`
+    trong `MainActivity.AppRoot`.
+  - Test mới: `AlbumUiStateTest` (2 test — không test được case có item vì
+    `android.net.Uri` không dựng được trên JVM thuần không Robolectric, ghi rõ lý do
+    trong comment), `GuideSectionsTest` (3 test — không rỗng/không trùng/không sót
+    placeholder), `TranslationUiStateTest` (4 test — tách hàm thuần
+    `withLanguagesSwapped()` để test được logic đổi chiều mà không cần ViewModel),
+    `MeetingUiStateTest` (4 test — `isEmpty`, `formatDuration` dưới/trên 1 giờ).
+
+- [x] **Test chuỗi Server Kính → App Communication Server → Điện thoại (2026-08-22)**,
+  theo yêu cầu người dùng, dùng repo thật `hohoangluan/visioncare-host-demo` (clone
+  làm sibling repo cạnh `app-demo-backend`, cùng cách xử lý như chính repo này —
+  thêm vào `.gitignore` gốc Your Eyes, không phải submodule).
+  - Server Kính là hệ thống ESP32 riêng (STT Zipformer cục bộ, intent SetFit +
+    Gemini fallback, TTS VieNeu, giao thức audio ADPCM tuỳ biến) — **không phải**
+    Server Kính chạy trong app-demo-backend, xác nhận đúng giả thuyết trước đó
+    (`docs/glasses-server-client-api.md`).
+  - Khớp `PUBLIC_API_TOKEN_HASH` local với đúng token Server Kính đã hardcode sẵn
+    trong `test_live_server_calls.py`/`config.py` mặc định
+    (`f23ChvjGZt_WYrY-A8eJAyxO5LVEF_TGujmE7F_gRAY`) — cùng cách đã làm với
+    `DEVICE_API_TOKEN_HASH` khớp app Android, để không phải sửa gì bên Server Kính.
+    Server Kính mặc định trỏ `http://127.0.0.1:8001` — **đúng cổng local đã dùng
+    từ trước** (do cổng 8000 bị chiếm), xác nhận quy ước cổng đã khớp sẵn giữa 2
+    team.
+  - Cài venv nhẹ (`httpx python-dotenv numpy`, không cần STT/TTS/Gemini nặng) để
+    chạy `test_live_server_calls.py` — pairing `glasses-123`↔`user-100` + toàn bộ
+    9 action (điều hướng, gọi liên hệ, khẩn cấp, đặt xe, nhạc) đều `202`, câu trả
+    lời tiếng Việt đúng ngữ cảnh. **Không phát hiện lệch contract nào** — toàn bộ
+    field JSON khớp chính xác giữa 2 phía.
+  - Chưa có điện thoại thật nên tự mô phỏng chặng cuối: đăng ký 1 "điện thoại giả"
+    (`device-100`) rồi `POST /device/report` như điện thoại thật báo kết quả —
+    operation chuyển đúng `processing`→`succeeded`, đúng thứ Server Kính sẽ nhận
+    khi poll. Phát hiện phụ: 1 request để quá 60s tự chuyển đúng `timed_out` với
+    mã `REPORT_TIMEOUT` — worker timeout hoạt động đúng.
+  - **Giới hạn còn lại**: chưa test được FCM thật (cần Firebase Admin service
+    account — bí mật của team, không tự tạo được) + chưa có điện thoại thật kết
+    nối qua `adb`.
+- [x] **Tối ưu quy trình pairing điện thoại-kính (frontend nhỏ, theo lựa chọn người
+  dùng qua AskUserQuestion — không đổi backend)**:
+  - `GlassesLinkUiState` thêm `pairedDeviceId`/`isPaired` — nhớ cục bộ lần pairing
+    thành công gần nhất (backend không có endpoint đọc trạng thái pairing hiện tại,
+    chỉ có `/link`+`/unlink` ghi, nên đây là "best record" phía app, không phải đọc
+    trực tiếp từ server).
+    Đã ghi rõ trong code: giá trị này có thể lệch nếu pairing bị đổi từ nơi khác
+    (máy cài khác, hoặc chính `test_live_server_calls.py` pairing đè `user-100`) —
+    `canSubmit`/`canUnlink` luôn gọi server thật, không tin giá trị nhớ cục bộ.
+  - `GlassesLinkScreen` thêm `PairingStatusCard` hiển thị trạng thái pairing hiện
+    tại (chấm xanh/xám + mã kính đang liên kết).
+  - Tự động viết hoa mã kính khi gõ (nhất quán định dạng), sửa hint text không
+    còn khẳng định cứng "10 ký tự" (không đúng với ví dụ thật `glasses-123` của
+    Server Kính).
+  - Test mới: 1 test `isPaired` thêm vào `GlassesLinkUiStateTest.kt` hiện có.
+
+Nhánh làm việc: `ui/vphoa`, đã push lên `hohoangluan/app-demo-backend` (đã được thêm
+collaborator) và tạo PR #1: <https://github.com/hohoangluan/app-demo-backend/pull/1>.
+
+### P6 quality-gate evidence (bảng riêng — bảng evidence gốc bên dưới có lỗi encoding cũ, không sửa để tránh hỏng thêm)
+
+| Ngày | Phạm vi | Lệnh | Kết quả |
+|---|---|---|---|
+| 2026-08-19 | P6 Activity Log (session 6) | PowerShell: `$env:ANDROID_HOME`/`$env:JAVA_HOME` set thủ công (SDK tại `C:\Users\Bong\AppData\Local\Android\Sdk`, JDK Temurin 25), `.\gradlew.bat test --no-daemon` | Pass — `ActivityLogUiStateTest` 9/9 mới pass, toàn bộ `testDebugUnitTest` BUILD SUCCESSFUL, không test cũ nào hỏng |
+| 2026-08-19 | P6 Activity Log (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (73 warning, toàn bộ thuộc các category cosmetic có sẵn từ trước; `ModifierParameter` xuất hiện thêm 2 lần đúng theo pattern `modifier` cuối cùng mà mọi Screen khác trong repo đã dùng); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `AuthUiStateTest` 7/7 mới pass, toàn bộ suite BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Auth (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 4→5, `Use KTX extension function` 13→15, cùng category cosmetic có sẵn, không category mới); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `PreferencesUiStateTest` 5/5 mới pass, toàn bộ suite BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Preferences (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint, số lượng warning mỗi category không đổi so với lần chạy trước (không category mới); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Support + Glasses Unlink (session 6) | `.\gradlew.bat test --no-daemon` | Pass — `SupportUiStateTest` 6/6 mới, `GlassesLinkUiStateTest` 6/6 (3 test cũ + 3 test `canUnlink` mới), toàn bộ suite BUILD SUCCESSFUL |
+| 2026-08-19 | P6 Support + Glasses Unlink (session 6) | `.\gradlew.bat lint assembleDebug --no-daemon` | Pass — 0 lỗi lint (`ModifierParameter` 5→6, cùng category cosmetic có sẵn); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `docker compose -f infra/compose.yaml --env-file .env up -d` + `alembic upgrade head` (local, port 8001) | Pass — 7 bảng đúng như migration, `/health/live` và `/health/ready` đều `ok` |
+| 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | curl trực tiếp toàn bộ endpoint mới (auth, preferences, support, glasses link/unlink, device register) bằng đúng field Kotlin gửi | Pass tất cả — response khớp chính xác schema; unlink lần 2 đúng `unlinked:false` (idempotent) |
+| 2026-08-21 | Rà soát + fix debounce + Spotify (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 48/48 test (toàn repo), 0 lỗi lint, 0 warning compiler (dọn 1 elvis-operator dư sau khi sửa); `assembleDebug` BUILD SUCCESSFUL |
+| 2026-08-22 | Album/Guide/Translation/Meeting (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 61/61 test (toàn repo, tăng từ 48), 0 lỗi lint, 0 warning compiler; `assembleDebug` BUILD SUCCESSFUL (kể cả dependency Coil mới resolve thành công) |
+| 2026-08-22 | Test Server Kính thật (session 6 tiếp) | `python test_live_server_calls.py` (visioncare-host-demo, venv riêng) nhắm vào backend local port 8001 | Pass — health/pairing/toàn bộ 9 action đều `202`, không lệch contract; verify thêm bằng `/device/report` giả lập → operation `succeeded` đúng |
+| 2026-08-22 | Tối ưu pairing UX (session 6 tiếp) | `.\gradlew.bat test lint assembleDebug --no-daemon` | Pass — 62/62 test (toàn repo), 0 lỗi lint, 0 warning compiler; `assembleDebug` BUILD SUCCESSFUL |
+
+Ghi chú môi trường: `apps/android/app/google-services.json` không có trong repo (đã bị
+`.gitignore` loại từ trước) nên phải tạo file placeholder cục bộ (không phải credential
+thật, chỉ đủ để Google Services Gradle plugin không crash khi build/test) — không commit,
+đã xác nhận vẫn nằm trong `.gitignore`.
 
 ## Quality-gate evidence
 
@@ -235,6 +473,69 @@ Ghi chÃ­nh xÃ¡c lá»‡nh, ngÃ y vÃ  káº¿t quáº£. KhÃ´ng Ä‘�
 - Đã rewrite lịch sử `main` để loại credential khỏi mọi commit, xóa refs/reflog backup và chạy `git gc --prune=now`.
 - Kiểm tra `git rev-list --all --objects`: pass — đường dẫn credential không còn trong refs. Kiểm tra blob cũ bằng `git cat-file -e`: pass — blob đã bị prune khỏi object store.
 - Không chạy test ứng dụng vì thay đổi chỉ liên quan đến lịch sử Git và nhật ký dự án; giữ nguyên toàn bộ thay đổi chưa commit của user.
+
+### 2026-08-22 — Session 6
+
+- Verified the current Android app on AVD `emulator-5554`: Gradle 9.5.0 wrapper download completed, `testDebugUnitTest assembleDebug` passed, APK installed, and the app process remained alive without app-level crash/exception logs.
+- Removed the Android `CAMERA` permission and optional camera feature declaration. The app no longer requests camera access at startup; the existing external system-camera intent remains permissionless.
+- Added T23 `capabilities_get` end to end: Android's fixed 10-field snapshot, Public Service operation route, database constraint migration, regenerated OpenAPI contracts, and `play-services-location`.
+- Verification passed: backend action mapping 14 tests, selected ruff checks, OpenAPI check, Android unit tests/assemble, and AVD cold-start without app crash. Real handset installation is still pending because the device disconnected from ADB.
+- Kept all pre-existing uncommitted Spotify/backend/contract changes intact.
+
+### 2026-08-22 — Session 7 (T19 incoming calls)
+
+- Added the spontaneous `POST /api/v1/device/event` path, independent from
+  registered action callbacks/request IDs. The host resolves the phone owner to
+  their active glasses and forwards to `/internal/device-events`.
+- Added `announce_caller` (`name | number_only | ring_only`, default `name`) to
+  preferences/model/repository/API and Alembic migration `20260822_0007`.
+- Added `call_answer` and `call_reject` operations, service endpoints, contract
+  routes, OpenAPI artifacts, Android action handlers, and migration `0006`.
+- Android now monitors ringing with `TelephonyCallback` (legacy fallback), joins
+  the protected phone-state broadcast for the incoming number, resolves names
+  locally through `PhoneLookup`, and never puts the full number into a network
+  payload or log.
+- Verification: backend selected suite 34 passed/2 opt-in PostgreSQL tests
+  skipped; the same 2 integration tests passed earlier against the disposable
+  PostgreSQL database after migrations 0001..0007. Android unit tests/assemble,
+  APK install/launch, emulator GSM call state, and a saved-contact lookup all
+  passed (`contact=true`, `tailDigits=4`).
+- T19 remains PARTIAL overall because the glasses firmware SSE/audio path is
+  blocked by the T18 board/RAM prerequisite. The emulator also has no persisted
+  production device registration, so its live event correctly stopped before
+  HTTP with a non-sensitive warning.
+
+
+## UI web mock độc lập (không thuộc phase Android/backend)
+
+- [x] Tạo web mock riêng trong nested repo `app/`, mô phỏng đủ 15 màn hình của
+  giao diện Android hiện tại và không thay đổi runtime Android/backend.
+- [x] Toàn bộ dữ liệu và hành động là state cục bộ; không gọi API, FCM, callback,
+  quyền thiết bị hoặc native intent. SOS chỉ hiển thị phản hồi mô phỏng sau 3 lần nhấn.
+- [x] Hỗ trợ điều hướng Back, khôi phục focus, cỡ chữ, tương phản cao và chế độ
+  nhà phát triển sau 7 lần chạm phiên bản.
+- [x] Xuất bản production tại `https://innostar-demo.vercel.app`; QR hiện có trong
+  `app/qr.png` tiếp tục dùng nguyên URL này nên không cần tạo hoặc in lại QR.
+
+### Quality-gate evidence cho UI web mock
+
+| Ngày | Lệnh / kiểm tra | Kết quả |
+|---|---|---|
+| 2026-08-24 | `npm test -- --run` | PASS — 4 files, 18 tests |
+| 2026-08-24 | `npm run typecheck` | PASS |
+| 2026-08-24 | `npm run e2e` | PASS — 57 tests, desktop 1280x900 và mobile 390x844 / 360x800 |
+| 2026-08-24 | `npx vercel --prod --yes` | PASS — deployment `dpl_7T2CxAgZ7mK7dkLdaB53WN9YQWMS`, READY, production alias cập nhật |
+
+### 2026-08-24 — Session 8 (UI web mock độc lập)
+
+- Hoàn thiện bộ UI web mock 15 route theo đặc tả tại
+  `app/docs/superpowers/specs/2026-08-24-android-ui-web-mock-design.md`.
+- Thêm test reducer/state, typecheck và Playwright cho toàn bộ route, hành động
+  mô phỏng, không phát sinh request ngoài origin, focus khi Back và chống tràn ở
+  cỡ chữ lớn nhất.
+- Triển khai lên Vercel project `innostar-demo`, giữ nguyên URL đích của QR cũ.
+- Track này tách biệt hoàn toàn với kế hoạch Android/backend; không sửa hành vi,
+  API, database, worker hoặc mã native Android hiện tại.
 
 
 ## Protocol tiếp tục ở session mới

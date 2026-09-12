@@ -15,17 +15,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,37 +43,54 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.sp
+import com.youreyes.app.R
+import androidx.compose.ui.graphics.ColorFilter
+import com.youreyes.app.ui.theme.isHighContrastMode
 import com.youreyes.app.ui.components.MiniStat
 import com.youreyes.app.ui.components.RowCard
 import com.youreyes.app.ui.components.ScreenShell
 import com.youreyes.app.ui.components.SectionLabel
-import com.youreyes.app.ui.theme.YourEyesBorder
-import com.youreyes.app.ui.theme.YourEyesButtonGradientEnd
-import com.youreyes.app.ui.theme.YourEyesButtonGradientStart
-import com.youreyes.app.ui.theme.YourEyesCyan
-import com.youreyes.app.ui.theme.YourEyesInk
-import com.youreyes.app.ui.theme.YourEyesMintSoft
-import com.youreyes.app.ui.theme.YourEyesMuted
-import com.youreyes.app.ui.theme.YourEyesNavy
-import com.youreyes.app.ui.theme.YourEyesShadow
-import com.youreyes.app.ui.theme.YourEyesSuccess
-import com.youreyes.app.ui.theme.YourEyesTeal
+import com.youreyes.app.ui.components.StatusPill
+import com.youreyes.app.ui.theme.accentColor
+import com.youreyes.app.ui.theme.accentTextColor
+import com.youreyes.app.ui.theme.borderColor
+import com.youreyes.app.ui.theme.inkColor
+import com.youreyes.app.ui.theme.mutedColor
+import com.youreyes.app.ui.theme.shadowColor
+import com.youreyes.app.ui.theme.successColor
+import com.youreyes.app.ui.theme.surfaceColor
 
 @Composable
 fun OverviewRoute(
     modifier: Modifier = Modifier,
     onNavigateToFeatures: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToActivityLog: () -> Unit = {},
+    onNavigateToAlbum: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {},
+    onNavigateToTranslation: () -> Unit = {},
+    onNavigateToMeeting: () -> Unit = {},
 ) {
     val viewModel: OverviewViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
+    // Picks up a login that happened on the Tài Khoản tab since this ViewModel was
+    // first created (see OverviewViewModel.refreshUserId doc).
+    LaunchedEffect(Unit) { viewModel.refreshUserId() }
 
     OverviewScreen(
         state = state,
         onNavigateToFeatures = onNavigateToFeatures,
         onNavigateToProfile = onNavigateToProfile,
+        onNavigateToActivityLog = onNavigateToActivityLog,
+        onNavigateToAlbum = onNavigateToAlbum,
+        onNavigateToGuide = onNavigateToGuide,
+        onNavigateToTranslation = onNavigateToTranslation,
+        onNavigateToMeeting = onNavigateToMeeting,
         modifier = modifier,
     )
 }
@@ -77,6 +100,11 @@ fun OverviewScreen(
     state: OverviewUiState,
     onNavigateToFeatures: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToActivityLog: () -> Unit = {},
+    onNavigateToAlbum: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {},
+    onNavigateToTranslation: () -> Unit = {},
+    onNavigateToMeeting: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ScreenShell(modifier = modifier) {
@@ -94,9 +122,9 @@ fun OverviewScreen(
                 modifier = Modifier.weight(1f),
             )
             FeatureChip(
-                label = "Voice Support",
+                label = "Hỗ trợ giọng nói",
                 icon = Icons.Default.Notifications,
-                tone = YourEyesSuccess,
+                tone = successColor,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -109,38 +137,13 @@ fun OverviewScreen(
             onConfigureClick = onNavigateToProfile,
         )
 
-        // Mini Stats Summary
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MiniStat(
-                label = "Tài khoản",
-                value = state.userId,
-                tone = YourEyesCyan,
-                modifier = Modifier.weight(1f),
-            )
-            MiniStat(
-                label = "Trạng thái",
-                value = if (state.isRegistered) "Sẵn sàng" else "Chưa nối",
-                tone = if (state.isRegistered) YourEyesSuccess else YourEyesTeal,
-                modifier = Modifier.weight(1f),
-            )
-            MiniStat(
-                label = "Bảo mật",
-                value = "OK",
-                tone = YourEyesSuccess,
-                modifier = Modifier.weight(1f),
-            )
-        }
-
         SectionLabel(text = "Trợ lý AI Kính Thông Minh")
 
         RowCard(
             title = "Khám phá Tính Năng Kính",
             subtitle = "Đặt xe, Đọc chữ, Điều hướng, Mô tả cảnh & Trợ lý Chatbot AI",
             icon = Icons.Default.Star,
-            iconTone = YourEyesCyan,
+            iconTone = accentColor,
             onClick = onNavigateToFeatures,
         )
 
@@ -148,8 +151,48 @@ fun OverviewScreen(
             title = "Hệ thống An Toàn & SOS",
             subtitle = "Kích hoạt báo động khẩn cấp & liên hệ người thân rảnh tay",
             icon = Icons.Default.Favorite,
-            iconTone = YourEyesTeal,
+            iconTone = accentTextColor,
             onClick = onNavigateToProfile,
+        )
+
+        RowCard(
+            title = "Lịch Sử Hoạt Động Của Kính",
+            subtitle = "Xem lại các lệnh gần đây: đặt xe, phát nhạc, điều hướng, khẩn cấp, gọi liên hệ...",
+            icon = Icons.Default.DateRange,
+            iconTone = inkColor,
+            onClick = onNavigateToActivityLog,
+        )
+
+        RowCard(
+            title = "Album Ảnh & Video",
+            subtitle = "Xem lại ảnh đã chụp qua lệnh của kính",
+            icon = Icons.Default.Photo,
+            iconTone = accentTextColor,
+            onClick = onNavigateToAlbum,
+        )
+
+        RowCard(
+            title = "Hướng Dẫn Sử Dụng",
+            subtitle = "Tìm hiểu cách dùng từng tính năng của Your Eyes",
+            icon = Icons.AutoMirrored.Filled.Help,
+            iconTone = accentColor,
+            onClick = onNavigateToGuide,
+        )
+
+        RowCard(
+            title = "Dịch Thuật (Demo)",
+            subtitle = "Dịch giọng nói thời gian thực — bản demo, chưa nối AI thật",
+            icon = Icons.Default.Translate,
+            iconTone = accentTextColor,
+            onClick = onNavigateToTranslation,
+        )
+
+        RowCard(
+            title = "Biên Bản Họp (Demo)",
+            subtitle = "Ghi âm & phiên âm cuộc họp — bản demo, chưa nối AI thật",
+            icon = Icons.Default.Groups,
+            iconTone = inkColor,
+            onClick = onNavigateToMeeting,
         )
     }
 }
@@ -162,23 +205,40 @@ private fun HeroBanner() {
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(22.dp),
-                spotColor = YourEyesShadow,
+                spotColor = shadowColor,
             ),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = com.youreyes.app.R.drawable.your_eyes_logo),
-                contentDescription = "YOUR EYES",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            // The mark on transparency plus live text, rather than the full logo
+            // bitmap: that bitmap is drawn on white, so on the high-contrast
+            // ground it appeared as a white rectangle floating in the card. The
+            // wordmark also sits in near-black and would have vanished there.
+            // Written out as text, the name follows the theme, scales with "Cỡ
+            // chữ", and is something TalkBack can actually read.
+            Image(
+                painter = painterResource(id = R.drawable.your_eyes_mark_transparent),
+                contentDescription = null,
+                modifier = Modifier.height(64.dp),
+                contentScale = ContentScale.Fit,
+                // Flattened to a single accent colour in high contrast. The mark is
+                // drawn as overlapping translucent strokes, so on a near-black ground
+                // its pale arm reads as dark-on-dark and the shape breaks apart —
+                // the same reason the launcher icon kept a light ground.
+                colorFilter = if (isHighContrastMode) ColorFilter.tint(accentColor) else null,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "YOUR EYES",
+                style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 4.sp),
+                color = inkColor,
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -187,8 +247,7 @@ private fun HeroBanner() {
                 text = "Chào mừng đến với Your Eyes",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Black,
-                    color = YourEyesInk,
-                    fontSize = 20.sp,
+                    color = inkColor,
                 ),
             )
 
@@ -197,9 +256,7 @@ private fun HeroBanner() {
             Text(
                 text = "Trợ lý AI thông minh giúp nghe - nhận biết - hỗ trợ người khiếm thị rảnh tay trong cuộc sống hằng ngày.",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = YourEyesMuted,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
+                    color = mutedColor,
                 ),
             )
         }
@@ -211,13 +268,13 @@ private fun FeatureChip(
     label: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
-    tone: Color = YourEyesCyan,
+    tone: Color = accentColor,
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(Color.White)
-            .border(1.dp, YourEyesBorder, RoundedCornerShape(999.dp))
+            .background(surfaceColor)
+            .border(1.dp, borderColor, RoundedCornerShape(999.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -233,8 +290,7 @@ private fun FeatureChip(
                 text = label,
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = YourEyesNavy,
-                    fontSize = 12.sp,
+                    color = inkColor,
                 ),
             )
         }
@@ -254,69 +310,45 @@ private fun DeviceStatusCard(
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(18.dp),
-                spotColor = YourEyesShadow,
+                spotColor = shadowColor,
             ),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, YourEyesBorder),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(
-                        text = "Kính Your Eyes",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            color = YourEyesInk,
-                            fontSize = 16.sp,
-                        ),
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (isRegistered) YourEyesSuccess else YourEyesMuted)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isRegistered) "● Đã kết nối với backend" else "● Chưa kết nối",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (isRegistered) YourEyesSuccess else YourEyesMuted,
-                                fontSize = 12.sp,
-                            ),
-                        )
-                    }
-                }
+            // Stacked rather than title-left / pill-right. Side by side, the title
+            // takes the width it needs and the pill is squeezed into a column of
+            // single characters — which is exactly what happens at "Cỡ chữ: To",
+            // where every string is a third longer.
+            Text(
+                text = "Kính Your Eyes",
+                style = MaterialTheme.typography.titleMedium,
+                color = inkColor,
+            )
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(YourEyesButtonGradientStart, YourEyesButtonGradientEnd)
-                            )
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = "Serial: $deviceId",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 11.sp,
-                        ),
-                    )
-                }
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(if (isRegistered) successColor else mutedColor)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isRegistered) "Đã kết nối" else "Chưa kết nối",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isRegistered) successColor else mutedColor,
+                )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // "Serial" is the word on the invoice, not the word a wearer uses.
+            StatusPill(text = "Mã kính: $deviceId")
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -327,15 +359,13 @@ private fun DeviceStatusCard(
                 Text(
                     text = "ID Tài khoản: $userId",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = YourEyesMuted,
-                        fontSize = 12.sp,
+                        color = mutedColor,
                     ),
                 )
                 Text(
                     text = "Phiên bản: v2.1.4",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = YourEyesMuted,
-                        fontSize = 12.sp,
+                        color = mutedColor,
                     ),
                 )
             }

@@ -131,6 +131,9 @@ class Settings(BaseSettings):
     fcm_project_id: str | None = None
     google_application_credentials: Path | None = None
 
+    spotify_client_id: str | None = None
+    spotify_client_secret: SecretStr | None = None
+
     worker_poll_seconds: float = Field(default=0.5, gt=0)
     worker_batch_size: int = Field(default=20, ge=1)
     delivery_lease_seconds: int = Field(default=30, ge=1)

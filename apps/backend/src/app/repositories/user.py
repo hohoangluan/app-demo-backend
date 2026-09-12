@@ -112,7 +112,14 @@ class UserRepository:
         """Return the user row for `user_id`, or `None`."""
         return await self._session.get(User, user_id)
 
-    async def update_preferences(
+    async def get_by_public_user_id(self, public_user_id: str) -> User | None:
+        """Return the account paired through a human-facing public user id."""
+        result = await self._session.execute(
+            select(User).where(User.public_user_id == public_user_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_preferences(  # noqa: PLR0913
         self,
         user_id: UUID,
         *,
@@ -120,6 +127,7 @@ class UserRepository:
         voice_option: str,
         high_contrast: bool,
         haptics_enabled: bool,
+        announce_caller: str,
     ) -> User | None:
         """Overwrite `user_id`'s accessibility preferences in place. Does not commit."""
         user = await self._session.get(User, user_id)
@@ -129,5 +137,6 @@ class UserRepository:
         user.voice_option = voice_option
         user.high_contrast = high_contrast
         user.haptics_enabled = haptics_enabled
+        user.announce_caller = announce_caller
         await self._session.flush()
         return user

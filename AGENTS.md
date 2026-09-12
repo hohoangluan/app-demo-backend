@@ -25,3 +25,10 @@ tests must use PostgreSQL rather than SQLite.
 Before ending a work session, update `TASK_PLAN.md` with checklist state,
 exact commands/results, blockers, and a concise session-log entry. Never mark a
 gate complete unless it actually ran successfully.
+
+## Parallel agents
+
+Another agent may be working on this repo at the same time, in a separate
+worktree. Read `AGENT_COORDINATION.md` before editing any file, and append your
+own status there before ending a session. It records worktree/branch ownership,
+per-file ownership, and requests addressed to the other agent.

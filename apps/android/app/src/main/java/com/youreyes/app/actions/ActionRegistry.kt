@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -22,12 +23,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
 import android.telecom.TelecomManager
 import android.telephony.PhoneNumberUtils
 import android.telephony.SmsManager
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.KeyEvent
 import androidx.core.app.NotificationManagerCompat
@@ -536,6 +539,127 @@ class ContactCallHandler : ActionHandler {
     }
 }
 
+private const val CALL_CONTROL_TIMEOUT_MS = 2_000L
+
+@SuppressLint("MissingPermission")
+private fun currentPhoneCallState(context: Context): Int? {
+    if (!hasPermission(context, Manifest.permission.READ_PHONE_STATE)) return null
+    val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        ?: return null
+    @Suppress("DEPRECATION")
+    return telephony.callState
+}
+
+private fun awaitPhoneCallState(context: Context, expected: Int): Boolean {
+    val deadline = System.currentTimeMillis() + CALL_CONTROL_TIMEOUT_MS
+    while (System.currentTimeMillis() < deadline) {
+        if (currentPhoneCallState(context) == expected) return true
+        Thread.sleep(100)
+    }
+    return currentPhoneCallState(context) == expected
+}
+
+/** T19 action sent by the glasses server while its 15-second call window is open. */
+class CallAnswerHandler : ActionHandler {
+    @SuppressLint("MissingPermission")
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
+        if (context == null) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_FAILED", "No context available")
+            )
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_UNSUPPORTED", "Answering requires Android 8 or newer")
+            )
+        }
+        if (!hasPermission(context, Manifest.permission.ANSWER_PHONE_CALLS) ||
+            !hasPermission(context, Manifest.permission.READ_PHONE_STATE)
+        ) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload(
+                    "CALL_PERMISSION_DENIED",
+                    "ANSWER_PHONE_CALLS and READ_PHONE_STATE permissions are required",
+                )
+            )
+        }
+        if (currentPhoneCallState(context) != TelephonyManager.CALL_STATE_RINGING) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("NO_INCOMING_CALL", "No ringing call is available to answer")
+            )
+        }
+        val telecom = context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager
+            ?: return ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_FAILED", "TelecomManager unavailable")
+            )
+        return runCatching {
+            @Suppress("DEPRECATION")
+            telecom.acceptRingingCall()
+            if (!awaitPhoneCallState(context, TelephonyManager.CALL_STATE_OFFHOOK)) {
+                ActionExecutionResult.Error(
+                    ReportErrorPayload("CALL_CONTROL_FAILED", "The call remained ringing after answer")
+                )
+            } else {
+                ActionExecutionResult.Success(mapOf("call_state" to "answered"))
+            }
+        }.getOrElse {
+            ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_FAILED", "Unable to answer call: ${it.message}")
+            )
+        }
+    }
+}
+
+/** T19 rejection; TelecomManager.endCall() returns false when nothing was rejected. */
+class CallRejectHandler : ActionHandler {
+    @SuppressLint("MissingPermission")
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
+        if (context == null) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_FAILED", "No context available")
+            )
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_UNSUPPORTED", "Rejecting requires Android 9 or newer")
+            )
+        }
+        if (!hasPermission(context, Manifest.permission.ANSWER_PHONE_CALLS) ||
+            !hasPermission(context, Manifest.permission.READ_PHONE_STATE)
+        ) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload(
+                    "CALL_PERMISSION_DENIED",
+                    "ANSWER_PHONE_CALLS and READ_PHONE_STATE permissions are required",
+                )
+            )
+        }
+        if (currentPhoneCallState(context) != TelephonyManager.CALL_STATE_RINGING) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("NO_INCOMING_CALL", "No ringing call is available to reject")
+            )
+        }
+        val telecom = context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager
+            ?: return ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_FAILED", "TelecomManager unavailable")
+            )
+        return runCatching {
+            @Suppress("DEPRECATION")
+            if (telecom.endCall()) {
+                ActionExecutionResult.Success(mapOf("call_state" to "rejected"))
+            } else {
+                ActionExecutionResult.Error(
+                    ReportErrorPayload("CALL_CONTROL_FAILED", "Telecom did not reject a call")
+                )
+            }
+        }.getOrElse {
+            ActionExecutionResult.Error(
+                ReportErrorPayload("CALL_CONTROL_FAILED", "Unable to reject call: ${it.message}")
+            )
+        }
+    }
+}
+
 /**
  * Contract action `location_get`: where the handset currently is.
  *
@@ -579,55 +703,132 @@ class LocationGetHandler : ActionHandler {
     }
 }
 
+/** Stands in for the artist when the request only named a song. */
+private const val UNKNOWN_ARTIST = "Unknown"
+
 /** Shared song-string parsing: "Title - Artist" (project_context.md 6.6 example) or title only. */
 private fun parseSongQuery(song: String): Pair<String, String> {
     val parts = song.split(" - ", limit = 2)
-    return if (parts.size == 2) parts[0].trim() to parts[1].trim() else song.trim() to "Unknown"
-}
-
-/**
- * Structured "play this specific song" voice-search contract (focus
- * `vnd.android.cursor.item/audio` + explicit artist/title), per
- * MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH docs — the generic wildcard
- * focus used previously only opened search results without auto-playing.
- */
-private fun buildPlayFromSearchIntent(song: String, title: String, artist: String): Intent =
-    Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
-        putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/audio")
-        putExtra(MediaStore.EXTRA_MEDIA_ARTIST, artist)
-        putExtra(MediaStore.EXTRA_MEDIA_TITLE, title)
-        putExtra("query", song)
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-
-private fun openInYouTubeMusic(context: Context, song: String, title: String, artist: String) {
-    val ytMusicIntent = buildPlayFromSearchIntent(song, title, artist).apply {
-        setPackage("com.google.android.apps.youtube.music")
-    }
-    val resolved = if (ytMusicIntent.resolveActivity(context.packageManager) != null) {
-        ytMusicIntent
-    } else {
-        buildPlayFromSearchIntent(song, title, artist)
-    }
-    launchUiIntent(context, resolved, "Dang phat nhac", song, sendPlayKeyDelayMs = 1800L)
+    return if (parts.size == 2) parts[0].trim() to parts[1].trim() else song.trim() to UNKNOWN_ARTIST
 }
 
 private const val YOUTUBE_MUSIC_PACKAGE = "com.google.android.apps.youtube.music"
 private const val YOUTUBE_MUSIC_BROWSER_SERVICE = "com.google.android.apps.youtube.music.mediabrowser.MusicBrowserService"
-private const val YT_MUSIC_BROWSER_TIMEOUT_MS = 8_000L
+private const val SPOTIFY_MUSIC_PACKAGE = "com.spotify.music"
+private const val SPOTIFY_BROWSER_SERVICE =
+    "com.spotify.mediabrowserservice.mediabrowserservice.SpotifyMediaBrowserService"
+private const val MUSIC_BROWSER_TIMEOUT_MS = 5_000L
+
+/** A music app we can drive through its own MediaBrowserService. */
+private data class MusicProvider(
+    val label: String,
+    val packageName: String,
+    val browserService: String,
+)
 
 /**
- * INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH only queues the track paused (confirmed
- * on-device). YouTube Music's own MediaBrowserService is the real, public,
- * OEM-portable API Android Auto/Assistant use to make a 3rd-party music app
- * start playback directly — binding to it and calling
- * MediaController.transportControls.playFromSearch() actually starts audio,
- * unlike a raw media-key nudge (which needs an already-active session to
- * target). No screen-scraping or accessibility permission involved.
+ * Who gets asked to play. Spotify is the product's music app.
+ *
+ * YouTube Music is deliberately not in this list even though it is the one that
+ * was measured loading and briefly playing the requested track on this handset,
+ * while Spotify published a session that never carried any metadata. Falling
+ * back to it would start a different app than the user expects, and the constant
+ * above is kept only so the manifest `<queries>` entry and this note stay
+ * discoverable if that decision is ever revisited.
  */
-private fun playViaYouTubeMusicBrowser(context: Context, song: String, title: String, artist: String): Boolean {
+private val MUSIC_PROVIDERS = listOf(
+    MusicProvider("Spotify", SPOTIFY_MUSIC_PACKAGE, SPOTIFY_BROWSER_SERVICE),
+)
+
+private fun isInstalled(context: Context, packageName: String): Boolean =
+    runCatching { context.packageManager.getPackageInfo(packageName, 0) }.isSuccess
+
+/**
+ * Queues [song] inside [provider] using the platform's voice-search contract.
+ *
+ * Needed because [playViaMediaBrowser] is refused on this handset: Spotify and
+ * YouTube Music both return null from `onGetRoot()` for callers that are not
+ * whitelisted (Android Auto, Assistant), so their MediaBrowserService answers
+ * `onConnectionFailed`. Measured, both of them.
+ *
+ * This intent does reach the app and loads the correct track — verified on-device
+ * by the resulting session carrying the right title and artist — but it leaves
+ * playback PAUSED. Pressing play is [pressPlayOnActiveSession]'s job.
+ *
+ * Sent through a full-screen-intent notification rather than `startActivity()`
+ * because this runs on a background FCM thread, where Android silently drops a
+ * bare activity start.
+ */
+/**
+ * Opens an exact track by its `spotify:track:<id>` uri.
+ *
+ * Preferred over a search when the backend could resolve one, because a search
+ * leaves the app to pick among covers, remixes and karaoke versions of the same
+ * title, while the uri names one recording. The backend resolves it through the
+ * Spotify Search API (`services/spotify.py`).
+ *
+ * This only loads the track — Spotify opens it and waits — so the caller still
+ * has to press play through the session, same as the search route.
+ */
+private fun openTrackUri(context: Context, provider: MusicProvider, uri: String, song: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+        setPackage(provider.packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    launchUiIntent(context, intent, "Dang phat nhac", song)
+}
+
+private fun queueViaSearchIntent(
+    context: Context,
+    provider: MusicProvider,
+    song: String,
+    title: String,
+    artist: String,
+) {
+    val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+        setPackage(provider.packageName)
+        putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/audio")
+        putExtra(MediaStore.EXTRA_MEDIA_TITLE, title)
+        if (artist.isNotBlank() && artist != UNKNOWN_ARTIST) {
+            putExtra(MediaStore.EXTRA_MEDIA_ARTIST, artist)
+        }
+        // SearchManager.QUERY, spelled out to avoid pulling in the whole class.
+        putExtra("query", song)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    launchUiIntent(context, intent, "Dang phat nhac", song)
+}
+
+/**
+ * Asks [provider] to search for [song] and start playing it.
+ *
+ * Binding the music app's own MediaBrowserService and calling
+ * `transportControls.playFromSearch()` is the public, OEM-portable API that
+ * Android Auto and Assistant use to make a third-party music app start playing.
+ * Two properties are what this action needs:
+ *
+ *  - It is **not** an activity start, so Android's Background Activity Launch
+ *    restriction does not apply and it works with the screen off and the handset
+ *    locked. Someone who cannot look at the phone is the entire use case.
+ *  - It takes a search string, not a catalog id, so it does not depend on the
+ *    Spotify Web API — which currently answers 403 for this app's credentials
+ *    and therefore cannot supply a trustworthy `spotify:track:` URI.
+ *
+ * `INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH` was the previous approach and only
+ * queues the track *paused* (confirmed on-device), which is why it is gone.
+ *
+ * Returns whether the command was **delivered**, not whether audio started —
+ * only [awaitMusicActive] can answer that.
+ */
+private fun playViaMediaBrowser(
+    context: Context,
+    provider: MusicProvider,
+    song: String,
+    title: String,
+    artist: String,
+): Boolean {
     val latch = CountDownLatch(1)
-    var started = false
+    var delivered = false
     Handler(Looper.getMainLooper()).post {
         var browser: MediaBrowser? = null
         val callback = object : MediaBrowser.ConnectionCallback() {
@@ -641,7 +842,8 @@ private fun playViaYouTubeMusicBrowser(context: Context, song: String, title: St
                             putString(MediaStore.EXTRA_MEDIA_TITLE, title)
                         }
                         controller.transportControls.playFromSearch(song, extras)
-                        started = true
+                        controller.transportControls.play()
+                        delivered = true
                     }
                 }
                 runCatching { browser?.disconnect() }
@@ -649,6 +851,7 @@ private fun playViaYouTubeMusicBrowser(context: Context, song: String, title: St
             }
 
             override fun onConnectionFailed() {
+                Log.w(TAG, "${provider.label}: MediaBrowser connection refused")
                 latch.countDown()
             }
 
@@ -658,26 +861,66 @@ private fun playViaYouTubeMusicBrowser(context: Context, song: String, title: St
         }
         browser = MediaBrowser(
             context,
-            android.content.ComponentName(YOUTUBE_MUSIC_PACKAGE, YOUTUBE_MUSIC_BROWSER_SERVICE),
+            ComponentName(provider.packageName, provider.browserService),
             callback,
             null
         )
-        runCatching { browser.connect() }.onFailure { latch.countDown() }
+        runCatching { browser.connect() }.onFailure {
+            Log.w(TAG, "${provider.label}: MediaBrowser.connect() threw", it)
+            latch.countDown()
+        }
     }
-    latch.await(YT_MUSIC_BROWSER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-    return started
+    latch.await(MUSIC_BROWSER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+    return delivered
 }
 
 /**
- * Longest we wait for a music app to actually start (or stop) producing audio.
+ * Longest the whole `music_play` action may spend waiting for audio, across
+ * every provider it tries.
  *
- * Same reasoning as [CALL_SETTLE_TIMEOUT_MS]: the budget covers the user tapping
- * the launcher notification plus YouTube Music loading the track, and stays
- * under the backend's 45s `music_play` / 30s `music_stop` deadlines.
+ * This is a budget for the action, not for one app, because [MUSIC_PROVIDERS] is
+ * tried in order and each attempt costs real seconds. Giving each provider its
+ * own 35s wait would total 70s and blow through the backend's 45s `music_play`
+ * deadline (app/actions.py), so the operation would be swept to `timed_out`
+ * while the handset was still working — the device's honest answer would never
+ * be heard. 38s leaves the backend a few seconds of headroom.
  */
-private const val PLAYBACK_SETTLE_TIMEOUT_MS = 35_000L
+private const val MUSIC_PLAY_BUDGET_MS = 38_000L
 private const val PLAYBACK_STOP_TIMEOUT_MS = 8_000L
 private const val PLAYBACK_POLL_INTERVAL_MS = 500L
+
+/**
+ * How long audio has to keep coming before the track counts as playing.
+ *
+ * Measured on this handset: YouTube Music produced 1.8s of audio and then paused
+ * itself. The first `isMusicActive` sample was true, so a handler that answered
+ * on that sample would have reported "playing" for a song the user heard a
+ * second of — the same lie this action was fixed to stop telling, just harder to
+ * catch.
+ */
+private const val PLAYBACK_HOLD_MS = 4_000L
+
+/**
+ * True when audio is still coming out [PLAYBACK_HOLD_MS] after it first appeared.
+ *
+ * Nudges once and returns false the moment it goes quiet, leaving the caller to
+ * decide whether there is still budget to try again.
+ */
+private fun confirmSustainedPlayback(
+    audioManager: AudioManager,
+    holdMs: Long,
+    nudge: () -> Unit,
+): Boolean {
+    val deadline = System.currentTimeMillis() + holdMs
+    while (System.currentTimeMillis() < deadline) {
+        Thread.sleep(PLAYBACK_POLL_INTERVAL_MS)
+        if (!audioManager.isMusicActive) {
+            nudge()
+            return false
+        }
+    }
+    return true
+}
 
 /** How long to keep nudging a queued-but-paused track before giving up. */
 private const val PLAY_NUDGE_WINDOW_MS = 20_000L
@@ -696,34 +939,109 @@ private const val PLAY_NUDGE_INTERVAL_MS = 1_500L
 private fun hasNotificationAccess(context: Context): Boolean =
     NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
 
-private fun pressPlayOnActiveSession(context: Context, song: String, title: String, artist: String): Boolean {
+/**
+ * What one nudge saw.
+ *
+ * The two flags separate the failure modes that matter: [sessionFound] false
+ * means the music app never came up at all, while [sessionFound] true with
+ * [metadataPresent] false means it came up and refused to take the track — the
+ * difference between "could not open Spotify" and "Spotify will not play this".
+ */
+private data class NudgeOutcome(
+    val sessionFound: Boolean,
+    val metadataPresent: Boolean,
+    /** Title the app says is loaded, so the caller can check it is the right song. */
+    val loadedTitle: String? = null,
+)
+
+/**
+ * True when [loaded] is the song that was asked for.
+ *
+ * Without this check the action reports the song it *requested* while the phone
+ * plays whatever was already queued: asked for "Lạc Trôi" with Spotify already
+ * playing "Nơi Này Có Anh", `isMusicActive` was true immediately and the action
+ * answered `playing: Lạc Trôi` over the wrong song. Audio coming out is not
+ * evidence that it is the right audio.
+ *
+ * Matching is loose on purpose — Spotify answers "Nơi Này Có Anh" for a request
+ * of "nơi này có anh" — so it compares case-insensitively and accepts either
+ * string containing the other.
+ */
+private fun titleMatches(loaded: String?, requested: String): Boolean {
+    val a = loaded?.trim()?.lowercase(Locale.getDefault()).orEmpty()
+    val b = requested.trim().lowercase(Locale.getDefault())
+    if (a.isEmpty() || b.isEmpty()) return false
+    return a.contains(b) || b.contains(a)
+}
+
+private fun pressPlayOnActiveSession(
+    context: Context,
+    packageName: String,
+    song: String,
+    title: String,
+    artist: String,
+): NudgeOutcome {
     val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-        ?: return false
+        ?: return NudgeOutcome(false, false)
     val listener = ComponentName(context, MediaControlListenerService::class.java)
 
     val sessions = try {
         manager.getActiveSessions(listener)
     } catch (exc: SecurityException) {
         Log.w(TAG, "No notification access; cannot reach media sessions", exc)
-        return false
+        return NudgeOutcome(false, false)
     }
 
-    val controller = sessions.firstOrNull { it.packageName == YOUTUBE_MUSIC_PACKAGE }
-        ?: sessions.firstOrNull()
-        ?: return false
+    Log.i(
+        TAG,
+        "nudge $packageName: visible sessions=" +
+            sessions.joinToString {
+                "${it.packageName}(meta=${it.metadata != null}," +
+                    "state=${it.playbackState?.state},actions=${it.playbackState?.actions})"
+            }
+    )
 
-    return try {
-        val extras = Bundle().apply {
-            putString(MediaStore.EXTRA_MEDIA_ARTIST, artist)
-            putString(MediaStore.EXTRA_MEDIA_TITLE, title)
+    // Strictly this provider. The fallback here used to be "any session", which
+    // presses play on whatever else happens to be open — in practice the empty
+    // Spotify session left behind by the previous provider — instead of the app
+    // we just queued.
+    val controller = sessions.firstOrNull { it.packageName == packageName }
+        ?: return NudgeOutcome(false, false)
+
+    val outcome = NudgeOutcome(
+        sessionFound = true,
+        metadataPresent = controller.metadata != null,
+        loadedTitle = controller.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE),
+    )
+
+    try {
+        if (titleMatches(outcome.loadedTitle, title)) {
+            // Our song is loaded and sitting in the queue: press play and nothing
+            // else. Re-issuing a search on every nudge restarts it, so the 1.5s
+            // loop would keep resetting the queue and it would never start.
+            controller.transportControls.play()
+        } else {
+            // Either nothing is loaded, or the app is sitting on a different
+            // song. Pressing play here would start someone else's track and the
+            // action would then report ours as playing.
+            val extras = Bundle().apply {
+                putString(MediaStore.EXTRA_MEDIA_ARTIST, artist)
+                putString(MediaStore.EXTRA_MEDIA_TITLE, title)
+            }
+            // Two ways to get a track into the queue, and Spotify's session
+            // advertises both (actions=141312 carries PREPARE_FROM_SEARCH and
+            // PLAY_FROM_SEARCH). prepareFromSearch goes first because it is the
+            // weaker request — load it, do not demand playback — and an app that
+            // refuses to start audio on its own may still accept being queued.
+            // Once it lands, metadata appears, the branch above takes over and
+            // presses play on a track that is already sitting there.
+            controller.transportControls.prepareFromSearch(song, extras)
+            controller.transportControls.playFromSearch(song, extras)
         }
-        controller.transportControls.playFromSearch(song, extras)
-        controller.transportControls.play()
-        true
     } catch (exc: Exception) {
-        Log.e(TAG, "transportControls.play() failed on ${controller.packageName}", exc)
-        false
+        Log.e(TAG, "transportControls play failed on ${controller.packageName}", exc)
     }
+    return outcome
 }
 
 /**
@@ -765,130 +1083,297 @@ private fun awaitMusicActive(
     return audioManager.isMusicActive == expected
 }
 
-/** Contract action `music_play` (project_context.md 6.6). */
+/**
+ * Contract action `music_play` (project_context.md 6.6).
+ *
+ * Reports `playing` only when the audio stack confirms sound is coming out.
+ *
+ * This handler previously called into the music app and then returned
+ * `playback_state: "playing"` unconditionally, discarding the launcher's own
+ * boolean. Every failure — wrong catalog id, Spotify Free refusing an on-demand
+ * track, the app never starting — was reported to the backend as success, and
+ * the glasses told the user their song was playing into silence. Someone who
+ * cannot see the screen has no way to catch that lie, so the success path is now
+ * gated on [awaitMusicActive], which polls [AudioManager.isMusicActive].
+ */
 class MusicPlayHandler : ActionHandler {
     override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
-        return runCatching {
-            val json = JSONObject(paramsJson)
-            val song = json.optString("song", "Unknown")
-            val requestedVolume = if (json.has("volume")) json.optInt("volume", 60).coerceIn(0, 100) else 60
-            val (title, artist) = parseSongQuery(song)
-
-            if (context != null) {
-                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-                    ?: return ActionExecutionResult.Error(
-                        ReportErrorPayload("PLAYBACK_FAILED", "AudioManager unavailable")
-                    )
-
-                // Set the volume before starting: coming up from silence afterwards
-                // means a blind listener misses the first seconds of the track.
-                val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (requestedVolume * maxVol) / 100, 0)
-
-                openInYouTubeMusic(context, song, title, artist)
-                playViaYouTubeMusicBrowser(context, song, title, artist)
-
-                // The session does not exist yet when the intent returns, so press
-                // play on a timer rather than once: whichever attempt lands after
-                // YouTube Music publishes its session is the one that starts audio.
-                val started = awaitMusicActive(
-                    audioManager,
-                    expected = true,
-                    timeoutMs = PLAYBACK_SETTLE_TIMEOUT_MS,
-                    nudge = {
-                        if (!pressPlayOnActiveSession(context, song, title, artist)) {
-                            audioManager.dispatchMediaKeyEvent(
-                                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
-                            )
-                            audioManager.dispatchMediaKeyEvent(
-                                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
-                            )
-                        }
-                    },
-                )
-
-                if (!started) {
-                    val hint = if (hasNotificationAccess(context)) {
-                        ""
-                    } else {
-                        " (grant this app notification access so it can press play)"
-                    }
-                    return ActionExecutionResult.Error(
-                        ReportErrorPayload(
-                            "PLAYBACK_FAILED",
-                            "Opened YouTube Music for '$song' but no audio started within " +
-                                "${PLAYBACK_SETTLE_TIMEOUT_MS / 1000}s$hint",
-                        )
-                    )
-                }
-            }
-
-            ActionExecutionResult.Success(
-                mapOf(
-                    "track_id" to "yt-music-${UUID.randomUUID().toString().take(8)}",
-                    "title" to title,
-                    "artist" to artist,
-                    "playback_state" to "playing",
-                    "volume" to requestedVolume
-                )
-            )
-        }.getOrElse {
-            ActionExecutionResult.Error(
+        val json = runCatching { JSONObject(paramsJson) }.getOrElse {
+            return ActionExecutionResult.Error(
                 ReportErrorPayload("PLAYBACK_FAILED", "Invalid music_play params: ${it.message}")
             )
         }
+
+        val song = json.optString("song", "").trim()
+        if (song.isEmpty()) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("SONG_NOT_FOUND", "music_play called without a song")
+            )
+        }
+        val requestedVolume = if (json.has("volume")) json.optInt("volume", 60).coerceIn(0, 100) else 60
+        // Resolved by the backend from the Spotify Search API; empty when that
+        // lookup failed, in which case we fall back to an in-app search.
+        val spotifyUri = json.optString("spotify_uri", "")
+        val (title, artist) = parseSongQuery(song)
+
+        if (context == null) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("PLAYBACK_FAILED", "No context available")
+            )
+        }
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return ActionExecutionResult.Error(
+                ReportErrorPayload("PLAYBACK_FAILED", "AudioManager unavailable")
+            )
+
+        // Raise the stream before the first note: starting a track into a muted
+        // stream looks exactly like "nothing played" to someone listening, and
+        // isMusicActive would still read true, so we would report success.
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (requestedVolume * maxVol) / 100, 0)
+
+        val deadline = System.currentTimeMillis() + MUSIC_PLAY_BUDGET_MS
+        val attempts = mutableListOf<String>()
+
+        // Spotify App Remote first: the only route that both starts a chosen track
+        // and reports back what is actually playing. Everything below it was
+        // measured either refusing us or silently leaving the previous song on.
+        if (spotifyUri.startsWith("spotify:track:") && isInstalled(context, SPOTIFY_MUSIC_PACKAGE)) {
+            val result = com.youreyes.app.media.SpotifyAppRemoteManager.playTrack(context, spotifyUri)
+            if (result.started) {
+                Log.i(TAG, "music_play: App Remote is playing '${result.playingTitle}'")
+                return ActionExecutionResult.Success(
+                    mapOf(
+                        // Spotify's own answer for what is on, not the request.
+                        "title" to (result.playingTitle ?: title),
+                        "artist" to artist,
+                        "playback_state" to "playing",
+                        "provider" to "Spotify",
+                        "volume" to requestedVolume
+                    )
+                )
+            }
+            attempts += "Spotify App Remote: ${result.detail}"
+            Log.w(TAG, "music_play: App Remote did not play - ${result.detail}")
+        }
+
+        // Did the music app ever come up, and did it ever accept the track?
+        // Together these turn a bare "it did not play" into a reason the user can
+        // act on — see the error code chosen at the end.
+        var sessionSeen = false
+        var trackLoaded = false
+        // Last title the provider reported. Audio alone does not prove the right
+        // song is playing, so success is gated on this matching the request.
+        var lastTitle: String? = null
+
+        for ((index, provider) in MUSIC_PROVIDERS.withIndex()) {
+            if (!isInstalled(context, provider.packageName)) {
+                attempts += "${provider.label}: not installed"
+                continue
+            }
+
+            val remaining = deadline - System.currentTimeMillis()
+            if (remaining <= 0) {
+                attempts += "${provider.label}: no time left in the ${MUSIC_PLAY_BUDGET_MS / 1000}s budget"
+                break
+            }
+            // Leave the last provider whatever is left; split evenly before that
+            // so a silent first choice cannot eat the whole budget.
+            val providersLeft = MUSIC_PROVIDERS.size - index
+            val slice = if (providersLeft <= 1) remaining else remaining / providersLeft
+
+            // Preferred route, but both big music apps refuse non-whitelisted
+            // MediaBrowser clients on this handset, so a refusal is expected
+            // rather than fatal — the search intent still gets the track loaded.
+            if (!playViaMediaBrowser(context, provider, song, title, artist)) {
+                // An exact track uri names one recording; a search leaves the app
+                // choosing between covers and remixes of the same title.
+                if (spotifyUri.startsWith("spotify:track:") && provider.packageName == SPOTIFY_MUSIC_PACKAGE) {
+                    Log.i(TAG, "${provider.label}: MediaBrowser refused, opening $spotifyUri")
+                    openTrackUri(context, provider, spotifyUri, song)
+                } else {
+                    Log.i(TAG, "${provider.label}: MediaBrowser refused, queueing via search intent")
+                    queueViaSearchIntent(context, provider, song, title, artist)
+                }
+            }
+
+            // Neither route reports whether audio started, and the search intent
+            // is known to leave the track paused, so the audio stack is the only
+            // source of truth from here. The nudge presses play on the provider's
+            // own session once it appears — a global media key cannot be used
+            // because it lands on whichever app owns the media button (measured:
+            // Spotify), not on the app we just queued.
+            val nudge = {
+                val seen = pressPlayOnActiveSession(context, provider.packageName, song, title, artist)
+                if (seen.sessionFound) sessionSeen = true
+                if (seen.metadataPresent) trackLoaded = true
+                lastTitle = seen.loadedTitle ?: lastTitle
+                Unit
+            }
+            val providerDeadline = System.currentTimeMillis() + slice
+
+            // Start, then prove it keeps going. A track that plays for a second
+            // and pauses itself is not playing, so a single true sample is not
+            // enough to answer with — retry inside this provider's slice until
+            // the audio sticks or the time is gone.
+            var playing = false
+            while (!playing && System.currentTimeMillis() < providerDeadline) {
+                val began = awaitMusicActive(
+                    audioManager,
+                    expected = true,
+                    timeoutMs = providerDeadline - System.currentTimeMillis(),
+                    nudge = nudge,
+                )
+                if (!began) break
+                playing = confirmSustainedPlayback(audioManager, PLAYBACK_HOLD_MS, nudge)
+                if (!playing) {
+                    Log.i(TAG, "${provider.label}: audio started then stopped, retrying")
+                    continue
+                }
+                // Sound is coming out, but is it OUR song? When the app was
+                // already playing something else, isMusicActive goes true on the
+                // first sample and this loop would otherwise exit reporting the
+                // requested title over the wrong track.
+                nudge()
+                if (!titleMatches(lastTitle, title)) {
+                    Log.i(
+                        TAG,
+                        "${provider.label}: playing '${lastTitle}', not the requested '$title' - keep asking"
+                    )
+                    playing = false
+                }
+            }
+
+            if (playing) {
+                Log.i(TAG, "music_play: ${provider.label} is playing '${lastTitle ?: title}'")
+                return ActionExecutionResult.Success(
+                    mapOf(
+                        // The title the handset says it is playing, not the one we
+                        // asked for — those are the same thing only once the check
+                        // above has passed, and reporting the request would hide it
+                        // if they ever diverge again.
+                        "title" to (lastTitle ?: title),
+                        "artist" to artist,
+                        "playback_state" to "playing",
+                        "provider" to provider.label,
+                        "volume" to requestedVolume
+                    )
+                )
+            }
+
+            attempts += if (sessionSeen && trackLoaded && !titleMatches(lastTitle, title)) {
+                "${provider.label}: kept playing '${lastTitle}' instead of the requested track"
+            } else {
+                "${provider.label}: took the search but never produced audio"
+            }
+            Log.w(TAG, "music_play: ${provider.label} stayed silent for '$song'")
+        }
+
+        // Nothing is playing. Say so, and say WHY — a false success leaves a blind
+        // user waiting for sound that never comes, and a vague "try again" sends
+        // them to retry something that cannot succeed however many times they ask.
+        //
+        // The session having come up while never taking the track is the specific,
+        // measured signature of an account that may not play a chosen song on
+        // demand: on a Spotify Free account this session sat at actions=141312
+        // with null metadata for the whole budget, refusing playFromSearch and
+        // prepareFromSearch alike. That is a subscription limit, not a fault, and
+        // the contract has a code for it (endpoint.md: music_play error codes).
+        val code = if (sessionSeen && !trackLoaded) "SUBSCRIPTION_INACTIVE" else "PLAYBACK_FAILED"
+        val detail = if (code == "SUBSCRIPTION_INACTIVE") {
+            "The music app opened but would not load '$song' - the account cannot " +
+                "play a chosen track on demand."
+        } else {
+            "No music app started playing '$song'."
+        }
+        Log.w(TAG, "music_play: $code for '$song' - ${attempts.joinToString("; ")}")
+        return ActionExecutionResult.Error(
+            ReportErrorPayload(code, "$detail ${attempts.joinToString("; ")}")
+        )
     }
 }
 
-/** Contract action `music_stop` (project_context.md 6.7): pauses whichever app holds audio focus. */
+/**
+ * Pauses every media session this app is allowed to see.
+ *
+ * Not just Spotify: [MusicPlayHandler] falls through to YouTube Music, so "stop"
+ * has to reach whichever app actually ended up playing.
+ */
+private fun pauseAllActiveSessions(context: Context): Int {
+    val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+        ?: return 0
+    val listener = ComponentName(context, MediaControlListenerService::class.java)
+    val sessions = try {
+        manager.getActiveSessions(listener)
+    } catch (exc: SecurityException) {
+        Log.w(TAG, "No notification access; cannot reach media sessions to pause", exc)
+        return 0
+    }
+    var paused = 0
+    for (controller in sessions) {
+        runCatching {
+            controller.transportControls.pause()
+            paused++
+        }.onFailure { Log.w(TAG, "pause() failed on ${controller.packageName}", it) }
+    }
+    return paused
+}
+
+/**
+ * Contract action `music_stop` (project_context.md 6.7).
+ *
+ * Confirms silence before reporting it, for the same reason [MusicPlayHandler]
+ * confirms sound: this used to return `stopped` unconditionally, so a pause that
+ * never landed still told the user the music had stopped while it kept playing.
+ */
 class MusicStopHandler : ActionHandler {
     override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
-        return runCatching {
-            if (context != null) {
-                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-                    ?: return ActionExecutionResult.Error(
-                        ReportErrorPayload("PLAYBACK_STOP_FAILED", "AudioManager unavailable")
-                    )
+        if (context == null) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("PLAYBACK_STOP_FAILED", "No context available")
+            )
+        }
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return ActionExecutionResult.Error(
+                ReportErrorPayload("PLAYBACK_STOP_FAILED", "AudioManager unavailable")
+            )
 
-                if (!audioManager.isMusicActive) {
-                    return ActionExecutionResult.Error(
-                        ReportErrorPayload("NO_ACTIVE_PLAYBACK", "Nothing is playing on this device")
-                    )
-                }
+        // Already quiet counts as stopped. The backend's device state cannot see a
+        // track ending on its own, so "tắt nhạc" often arrives for music that
+        // finished minutes ago; erroring there would be a failure the user cannot
+        // act on.
+        if (!audioManager.isMusicActive) {
+            return ActionExecutionResult.Success(mapOf("playback_state" to "stopped"))
+        }
 
-                audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE))
-                audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE))
+        val paused = pauseAllActiveSessions(context)
+        val stopped = awaitMusicActive(audioManager, expected = false, timeoutMs = PLAYBACK_STOP_TIMEOUT_MS)
 
-                if (!awaitMusicActive(audioManager, expected = false, timeoutMs = PLAYBACK_STOP_TIMEOUT_MS)) {
-                    return ActionExecutionResult.Error(
-                        ReportErrorPayload(
-                            "PLAYBACK_STOP_FAILED",
-                            "Sent MEDIA_PAUSE but audio was still playing after " +
-                                "${PLAYBACK_STOP_TIMEOUT_MS / 1000}s",
-                        )
-                    )
-                }
-            }
+        return if (stopped) {
             ActionExecutionResult.Success(mapOf("playback_state" to "stopped"))
-        }.getOrElse {
+        } else {
             ActionExecutionResult.Error(
-                ReportErrorPayload("PLAYBACK_STOP_FAILED", "Failed to stop playback: ${it.message}")
+                ReportErrorPayload(
+                    "PLAYBACK_STOP_FAILED",
+                    "Paused $paused media session(s) but audio was still playing after " +
+                        "${PLAYBACK_STOP_TIMEOUT_MS / 1000}s"
+                )
             )
         }
     }
 }
 
-/** Legacy local-demo action, kept for the "media_play" quick-demo button; not a backend contract action. */
+/** Legacy local-demo action, updated to use Spotify provider. */
 class MediaPlayHandler : ActionHandler {
     override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val song = json.optString("song", "Track")
+            val spotifyUri = json.optString("spotify_uri", "")
             if (context != null) {
-                val (title, artist) = parseSongQuery(song)
-                openInYouTubeMusic(context, song, title, artist)
+                com.youreyes.app.media.SpotifyRemoteManager.playTrack(context, spotifyUri, song)
             }
-            ActionExecutionResult.Success(mapOf("song" to song, "playback_status" to "playing", "app" to "youtube_music"))
+            ActionExecutionResult.Success(mapOf("song" to song, "playback_status" to "playing", "app" to "spotify"))
         }.getOrElse {
             ActionExecutionResult.Error(
                 ReportErrorPayload("INVALID_PARAMS", "Invalid media_play params: ${it.message}")
@@ -1100,18 +1585,43 @@ class QuotesSpeakHandler : ActionHandler {
     }
 }
 
+/**
+ * Display-name prefix every camera_capture photo is saved under, so the Album screen
+ * ([com.youreyes.app.ui.album.AlbumViewModel]) can filter MediaStore to just
+ * glasses-triggered captures instead of the phone's entire camera roll. Also makes
+ * every capture a MediaStore row this app's own `ContentResolver.insert()` created, so
+ * Album can read them back without any READ_MEDIA_IMAGES/READ_MEDIA_VIDEO runtime
+ * permission — Android's Scoped Storage always lets an app see media rows it owns.
+ */
+const val CAMERA_CAPTURE_NAME_PREFIX = "YourEyes_"
+
+/** Inserts a pending MediaStore row for a new photo, or null if the insert itself failed. */
+private fun createCaptureOutputUri(context: Context): Uri? {
+    val values = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "$CAMERA_CAPTURE_NAME_PREFIX${System.currentTimeMillis()}.jpg")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+    }
+    return context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+}
+
 class CameraCaptureHandler : ActionHandler {
     override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
         return runCatching {
             val json = JSONObject(paramsJson)
             val mode = json.optString("mode", "photo")
             if (context != null) {
+                val outputUri = createCaptureOutputUri(context)
                 val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    if (outputUri != null) {
+                        putExtra(MediaStore.EXTRA_OUTPUT, outputUri)
+                    }
                 }
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    context.startActivity(intent)
-                }
+                // Was a raw startActivity() before — Android silently drops that when
+                // called from this background FCM-receiver/service thread, the same
+                // class of bug launchUiIntent already exists to fix for every other
+                // action.
+                launchUiIntent(context, intent, "Mo camera", "Chup anh qua kinh")
             }
             ActionExecutionResult.Success(mapOf("mode" to mode, "capture_status" to "captured"))
         }.getOrElse {
@@ -1164,6 +1674,50 @@ class UnsupportedActionHandler(private val actionName: String) : ActionHandler {
     }
 }
 
+/** Returns the fixed T23 capability shape used by the glasses server. */
+class CapabilitiesGetHandler : ActionHandler {
+    override fun execute(context: Context?, paramsJson: String): ActionExecutionResult {
+        if (context == null) {
+            return ActionExecutionResult.Error(
+                ReportErrorPayload("INVALID_PARAMS", "Context is required for capabilities_get")
+            )
+        }
+
+        fun granted(permission: String): Boolean =
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+        val hasForegroundLocation =
+            granted(Manifest.permission.ACCESS_FINE_LOCATION) ||
+                granted(Manifest.permission.ACCESS_COARSE_LOCATION)
+        val hasBackgroundLocation =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+                granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        val backgroundLocation = when {
+            hasForegroundLocation && hasBackgroundLocation -> "always"
+            hasForegroundLocation -> "while_using"
+            else -> "never"
+        }
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        val prefs = context.getSharedPreferences(FcmPushReceiver.PREFS_NAME, Context.MODE_PRIVATE)
+
+        val capabilities: Map<String, Any> = linkedMapOf(
+            "notification_listener" to hasNotificationAccess(context),
+            "system_alert_window" to Settings.canDrawOverlays(context),
+            "battery_optimization_off" to
+                (powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true),
+            "background_location" to backgroundLocation,
+            "fine_location" to granted(Manifest.permission.ACCESS_FINE_LOCATION),
+            "read_contacts" to granted(Manifest.permission.READ_CONTACTS),
+            "read_phone_state" to granted(Manifest.permission.READ_PHONE_STATE),
+            "call_phone" to granted(Manifest.permission.CALL_PHONE),
+            "send_sms" to granted(Manifest.permission.SEND_SMS),
+            "emergency_contact_set" to
+                !prefs.getString(FcmPushReceiver.KEY_EMERGENCY_CONTACT, null).isNullOrBlank(),
+        )
+        return ActionExecutionResult.Success(mapOf("capabilities" to capabilities))
+    }
+}
+
 class ActionRegistry {
     private val handlers = mapOf<String, ActionHandler>(
         ActionType.RIDE_QUOTE.value to RideQuoteHandler(),
@@ -1176,6 +1730,9 @@ class ActionRegistry {
         ActionType.EMERGENCY_CALL.value to EmergencyCallHandler(),
         ActionType.CONTACT_CALL.value to ContactCallHandler(),
         ActionType.LOCATION_GET.value to LocationGetHandler(),
+        ActionType.CAPABILITIES_GET.value to CapabilitiesGetHandler(),
+        ActionType.CALL_ANSWER.value to CallAnswerHandler(),
+        ActionType.CALL_REJECT.value to CallRejectHandler(),
         ActionType.QUOTES_SPEAK.value to QuotesSpeakHandler(),
         ActionType.MEDIA_PLAY.value to MediaPlayHandler(),
         ActionType.CAMERA_CAPTURE.value to CameraCaptureHandler(),

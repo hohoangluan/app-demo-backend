@@ -43,6 +43,26 @@ paths:
                 $ref: '#/components/schemas/OkResponse_DeviceReportData_'
       security:
       - DeviceBearerAuth: []
+  /api/v1/device/event:
+    post:
+      summary: Post Device Event
+      description: Describe the spontaneous Android event endpoint contract.
+      operationId: post_device_event_api_v1_device_event_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceEventRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse_DeviceEventData_'
+      security:
+      - DeviceBearerAuth: []
   /api/v1/device/glasses/link:
     post:
       summary: Link Glasses Device
@@ -97,8 +117,54 @@ components:
       - navigation_stop
       - emergency_call
       - contact_call
+      - location_get
+      - capabilities_get
+      - call_answer
+      - call_reject
       title: Action
       description: Internal handler actions corresponding one-to-one with operations.
+    DeviceEventData:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        glasses_device_id:
+          type: string
+          title: Glasses Device Id
+        event_forwarded:
+          type: boolean
+          const: true
+          title: Event Forwarded
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      - glasses_device_id
+      title: DeviceEventData
+      description: Acknowledgement after an event has reached the glasses server.
+    DeviceEventRequest:
+      properties:
+        device_id:
+          type: string
+          title: Device Id
+        type:
+          type: string
+          enum:
+          - call_incoming
+          - call_ended
+          title: Type
+        caller:
+          anyOf:
+          - $ref: '#/components/schemas/IncomingCaller'
+          - type: 'null'
+      additionalProperties: false
+      type: object
+      required:
+      - device_id
+      - type
+      title: DeviceEventRequest
+      description: Spontaneous Android event; deliberately has no action request_id.
     DeviceExecutionError:
       properties:
         code:
@@ -279,7 +345,46 @@ components:
       - user_id
       title: GlassesUnlinkRequest
       description: Unpair whichever glasses device_id is currently active for user_id.
+    IncomingCaller:
+      properties:
+        contact_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contact Id
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        number_tail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Number Tail
+        duplicate_name:
+          type: boolean
+          title: Duplicate Name
+          default: false
+      additionalProperties: false
+      type: object
+      title: IncomingCaller
+      description: Caller identity after the phone has removed the full phone number.
     JsonValue: {}
+    OkResponse_DeviceEventData_:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        data:
+          $ref: '#/components/schemas/DeviceEventData'
+      additionalProperties: false
+      type: object
+      required:
+      - data
+      title: OkResponse[DeviceEventData]
     OkResponse_DeviceRegisterData_:
       properties:
         status:

@@ -11,15 +11,27 @@ class ActionRegistryTest {
 
     private val registry = ActionRegistry()
 
-    // The 9 backend Public API contract actions (project_context.md section 6.4-6.12).
+    // Backend Public API contract actions, including T23 capability discovery.
     private val contractActions = setOf(
         "ride_quote", "ride_confirm", "music_play", "music_stop", "music_volume",
         "navigation_start", "navigation_stop", "emergency_call", "contact_call",
+        "location_get", "capabilities_get",
+        "call_answer", "call_reject",
     )
 
-    // contact_call / emergency_call / location_get do real system/context lookups
-    // and require a real Android Context; a plain JVM unit test only has null.
-    private val contextRequiredActions = setOf("emergency_call", "contact_call", "location_get")
+    // These do real system/context work and require a real Android Context; a
+    // plain JVM unit test only has null.
+    //
+    // music_play and music_stop joined this set when they stopped guessing: they
+    // now answer from AudioManager.isMusicActive, so without a Context there is
+    // no audio stack to ask and the only honest answer is an error. They used to
+    // return `playback_state: "playing"` here — with no device at all — which is
+    // exactly the bug the tests below now guard against.
+    private val contextRequiredActions = setOf(
+        "emergency_call", "contact_call", "location_get", "capabilities_get",
+        "music_play", "music_stop",
+        "call_answer", "call_reject",
+    )
 
     @Test
     fun testAllBackendContractActionsAreRegistered() {
@@ -65,25 +77,37 @@ class ActionRegistryTest {
         assertEquals(75, data["level"])
     }
 
+    /**
+     * The previous version of this test asserted `playback_state == "playing"`
+     * from a call with a null Context — no handset, no audio stack, nothing that
+     * could possibly be playing. It passed, which is how the action shipped
+     * telling blind users their song was playing into silence.
+     *
+     * `playing` is now only ever reported after AudioManager confirms audio, so
+     * with nothing to ask, the handler must refuse rather than assume.
+     */
     @Test
-    fun testMusicPlayHandlerReturnsContractFields() {
+    fun testMusicPlayWithoutContextReportsFailureInsteadOfAssumingPlayback() {
         val result = registry.getHandler("music_play")
             .execute(null, """{"song": "Noi nay co anh - Son Tung M-TP", "volume": 60}""")
-        assertTrue(result is ActionExecutionResult.Success)
-        val data = (result as ActionExecutionResult.Success).resultData
-        assertEquals("Noi nay co anh", data["title"])
-        assertEquals("Son Tung M-TP", data["artist"])
-        assertEquals("playing", data["playback_state"])
-        assertEquals(60, data["volume"])
-        assertTrue(data.containsKey("track_id"))
+        assertTrue("music_play must not claim success without a device", result is ActionExecutionResult.Error)
+        assertEquals("PLAYBACK_FAILED", (result as ActionExecutionResult.Error).errorPayload.code)
     }
 
+    /** A play request that names no song is a bad request, not a playback failure. */
     @Test
-    fun testMusicStopHandlerReturnsContractFields() {
+    fun testMusicPlayWithoutSongIsSongNotFound() {
+        val result = registry.getHandler("music_play").execute(null, """{"volume": 60}""")
+        assertTrue(result is ActionExecutionResult.Error)
+        assertEquals("SONG_NOT_FOUND", (result as ActionExecutionResult.Error).errorPayload.code)
+    }
+
+    /** Same reasoning as music_play: silence has to be confirmed, not assumed. */
+    @Test
+    fun testMusicStopWithoutContextReportsFailureInsteadOfAssumingStopped() {
         val result = registry.getHandler("music_stop").execute(null, "{}")
-        assertTrue(result is ActionExecutionResult.Success)
-        val data = (result as ActionExecutionResult.Success).resultData
-        assertEquals("stopped", data["playback_state"])
+        assertTrue("music_stop must not claim success without a device", result is ActionExecutionResult.Error)
+        assertEquals("PLAYBACK_STOP_FAILED", (result as ActionExecutionResult.Error).errorPayload.code)
     }
 
     @Test

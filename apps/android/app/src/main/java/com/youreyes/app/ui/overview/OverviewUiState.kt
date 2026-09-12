@@ -12,7 +12,7 @@ data class OverviewUiState(
     val pushToken: String = "push-token-demo-123",
     val isLoading: Boolean = false,
     val isRegistered: Boolean = false,
-    val registrationMessage: String = "Not registered",
+    val registrationMessage: String = "Chưa đăng ký",
     val commands: List<CommandRecord> = emptyList(),
     val pendingReports: List<PendingReportRecord> = emptyList()
 ) {

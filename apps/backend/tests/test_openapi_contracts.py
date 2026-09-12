@@ -20,11 +20,15 @@ PUBLIC_PATHS = {
     "/api/v1/service/emergency/call",
     "/api/v1/service/contact/call",
     "/api/v1/service/location/get",
+    "/api/v1/service/capabilities",
+    "/api/v1/service/call/answer",
+    "/api/v1/service/call/reject",
     "/api/v1/requests/{request_id}",
 }
 DEVICE_PATHS = {
     "/api/v1/device/register",
     "/api/v1/device/report",
+    "/api/v1/device/event",
     "/api/v1/device/glasses/link",
     "/api/v1/device/glasses/unlink",
 }
@@ -62,8 +66,12 @@ def test_public_and_device_contract_paths_are_separated(test_app: FastAPI) -> No
         "/api/v1/service/emergency/call",
         "/api/v1/service/contact/call",
         "/api/v1/service/location/get",
+        "/api/v1/service/capabilities",
+        "/api/v1/service/call/answer",
+        "/api/v1/service/call/reject",
         "/api/v1/device/register",
         "/api/v1/device/report",
+        "/api/v1/device/event",
         "/api/v1/device/glasses/link",
         "/api/v1/device/glasses/unlink",
         "/api/v1/device/link",

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 FontSizeOption = Literal["Nhỏ", "Vừa", "To"]
 VoiceOption = Literal["Giọng Nữ", "Giọng Nam"]
+AnnounceCallerOption = Literal["name", "number_only", "ring_only"]
 
 
 class PreferencesData(BaseModel):
@@ -17,6 +18,7 @@ class PreferencesData(BaseModel):
     voice_option: VoiceOption
     high_contrast: bool
     haptics_enabled: bool
+    announce_caller: AnnounceCallerOption
 
 
 class UpdatePreferencesRequest(BaseModel):
@@ -28,3 +30,4 @@ class UpdatePreferencesRequest(BaseModel):
     voice_option: VoiceOption
     high_contrast: bool
     haptics_enabled: bool
+    announce_caller: AnnounceCallerOption

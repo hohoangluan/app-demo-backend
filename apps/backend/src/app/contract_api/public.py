@@ -8,6 +8,9 @@ from fastapi.security import HTTPBearer
 
 from app.schemas.common import AcceptedResponse, ErrorResponse, OkResponse, RequestStatusData
 from app.schemas.service_requests import (
+    CallAnswerRequest,
+    CallRejectRequest,
+    CapabilitiesGetRequest,
     ContactCallRequest,
     EmergencyCallRequest,
     LocationGetRequest,
@@ -156,6 +159,39 @@ async def contact_call(_request: ContactCallRequest) -> Never:
 )
 async def location_get(_request: LocationGetRequest) -> Never:
     """Describe the device location lookup endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/service/call/answer",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=PUBLIC_VALIDATION_RESPONSE,
+)
+async def call_answer(_request: CallAnswerRequest) -> Never:
+    """Describe the incoming-call answer endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/service/call/reject",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=PUBLIC_VALIDATION_RESPONSE,
+)
+async def call_reject(_request: CallRejectRequest) -> Never:
+    """Describe the incoming-call rejection endpoint contract."""
+    _contract_only()
+
+
+@router.post(
+    "/api/v1/service/capabilities",
+    response_model=AcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=PUBLIC_VALIDATION_RESPONSE,
+)
+async def capabilities_get(_request: CapabilitiesGetRequest) -> Never:
+    """Describe the Android capability snapshot endpoint contract."""
     _contract_only()
 
 

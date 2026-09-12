@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.youreyes.app.data.AppDatabaseHelper
 import com.youreyes.app.dispatcher.CommandDispatcher
+import com.youreyes.app.dispatcher.PendingReportFlusher
 import java.util.concurrent.Executors
 
 /**
@@ -60,6 +61,18 @@ class CommandExecutionService : Service() {
 
         executor.execute {
             try {
+                // 🔴 Xả hàng đợi báo cáo TRƯỚC khi làm việc mới.
+                //
+                // `CommandDispatcher` thử gửi mỗi báo cáo đúng MỘT lần; hỏng thì
+                // nó nằm lại ở `FAILED` và trước 2026-08-25 không ai đọc lại.
+                // Server kính chờ `ActionResult` để biết việc đã xong — không có
+                // nó thì nó hứa "tôi sẽ cập nhật khi có kết quả" và không bao giờ
+                // giữ lời.
+                //
+                // Đặt ở đây vì đây là lúc chắc chắn có mạng và có đủ giấy tờ.
+                // Rỗng thì chỉ tốn một lượt đọc SQLite.
+                PendingReportFlusher.flush(appContext, baseUrl, bearerToken)
+
                 val result = CommandDispatcher(
                     dbHelper = AppDatabaseHelper(appContext),
                     context = appContext,

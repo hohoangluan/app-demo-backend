@@ -17,6 +17,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
+from app.adapters.device_events import DeviceEventAdapter
 from app.auth import UserPrincipal, require_device_bearer_token, require_user_session
 from app.config import Settings, get_app_settings
 from app.database import get_db_session
@@ -29,15 +30,19 @@ from app.repositories.device import (
     DeviceRegistrationRequest,
     DeviceRepository,
 )
+from app.repositories.glasses_device import GlassesDeviceRepository
 from app.repositories.operation import (
     DeviceReport,
     OperationRepository,
     ReportExecutionState,
     ReportOutcomeStatus,
 )
+from app.repositories.user import UserRepository
 from app.schemas.auth import DeviceLinkData, DeviceLinkRequest
 from app.schemas.common import OkResponse
 from app.schemas.device import (
+    DeviceEventData,
+    DeviceEventRequest,
     DeviceRegisterData,
     DeviceRegisterRequest,
     DeviceReportData,
@@ -45,6 +50,7 @@ from app.schemas.device import (
     ExecutionState,
 )
 from app.services.auth import confirm_device_link
+from app.services.device_events import DeviceEventService
 from app.workers.wake import WorkerWakeSignals, get_worker_wake_signals
 
 router = APIRouter(prefix="/api/v1/device", tags=["device"])
@@ -171,6 +177,33 @@ async def report_device_action(
             wake_signals.callback.set()
 
     return OkResponse(data=DeviceReportData(request_id=body.request_id, report_received=True))
+
+
+@router.post(
+    "/event",
+    response_model=OkResponse[DeviceEventData],
+    dependencies=[Depends(require_device_bearer_token)],
+)
+async def post_device_event(
+    body: DeviceEventRequest,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> OkResponse[DeviceEventData]:
+    """Forward an unsolicited phone event without inventing an action request_id."""
+    service = DeviceEventService(
+        DeviceRepository(session),
+        GlassesDeviceRepository(session),
+        UserRepository(session),
+        DeviceEventAdapter(settings),
+    )
+    glasses_device_id = await service.forward(body)
+    return OkResponse(
+        data=DeviceEventData(
+            device_id=str(body.device_id),
+            glasses_device_id=glasses_device_id,
+            event_forwarded=True,
+        )
+    )
 
 
 @router.post("/link", response_model=OkResponse[DeviceLinkData])

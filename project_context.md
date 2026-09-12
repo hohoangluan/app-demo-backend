@@ -857,6 +857,37 @@ Khi có nhiều liên hệ trùng tên, request chuyển sang `failed`:
 
 Mã lỗi kết quả: `CONTACT_NOT_FOUND`, `MULTIPLE_CONTACTS_FOUND`, `CONTACT_PERMISSION_DENIED`, `CALL_PERMISSION_DENIED`, `CALL_FAILED`.
 
+### 6.12a. Đọc capabilities Android
+
+```http
+POST /api/v1/service/capabilities
+```
+
+Request chỉ gồm hai trường chung `device_id` và `request_id`. Host phát action
+`capabilities_get` tới Android; kết quả cuối có đúng 10 khoá đóng:
+
+```json
+{
+  "capabilities": {
+    "notification_listener": true,
+    "system_alert_window": false,
+    "battery_optimization_off": false,
+    "background_location": "while_using",
+    "fine_location": true,
+    "read_contacts": true,
+    "read_phone_state": false,
+    "call_phone": true,
+    "send_sms": true,
+    "emergency_contact_set": false
+  }
+}
+```
+
+`background_location` chỉ nhận `never`, `while_using` hoặc `always`; chín trường
+còn lại là boolean. Client cũ chưa có action này có thể trả `UNSUPPORTED_ACTION`;
+caller phải thoái hoá êm và không dùng việc thiếu capability làm rào cản cho các
+chức năng phụ.
+
 ### 6.13. Internal Device API
 
 Các endpoint dưới đây chỉ dành cho ứng dụng Android, không công bố cho External API Client.

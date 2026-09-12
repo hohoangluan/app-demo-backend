@@ -46,3 +46,4 @@ tmp/
 # test_real: manual External-API-Client run tooling (contains a raw bearer token + run artifacts)
 test_real/config.local.json
 test_real/results/
+.screenshots/
