@@ -4,7 +4,7 @@ Tài liệu này là chỉ dẫn bắt buộc khi phân tích, viết, sửa, re
 
 ## 1. Nguyên tắc cốt lõi
 
-- Đọc `project_context.md` và `architeture.md` trước khi triển khai phần có liên quan đến nghiệp vụ, API, dữ liệu, worker hoặc Android.
+- Đọc `docs/project-context.md` (hợp đồng) và `docs/architecture.md` (module và luồng) trước khi triển khai phần có liên quan đến nghiệp vụ, API, dữ liệu, worker hoặc Android.
 - Không đoán hợp đồng nghiệp vụ. Khi tài liệu, schema và mã nguồn mâu thuẫn, phải chỉ rõ mâu thuẫn và xác nhận nguồn đúng trước khi thay đổi hành vi public.
 - Ưu tiên thay đổi nhỏ, tập trung và dễ review. Không refactor ngoài phạm vi nếu không cần thiết để hoàn thành chức năng.
 - Không được làm cho test đang chạy thành công bị hỏng. Không xóa, bỏ qua, làm yếu assertion hoặc đánh dấu `skip` chỉ để vượt qua kiểm thử.
@@ -117,7 +117,7 @@ Dùng lệnh được định nghĩa trong `pyproject.toml`, Gradle và CI làm 
 ### Backend
 
 ```powershell
-Set-Location apps/backend
+Set-Location server
 uv sync --frozen
 uv run ruff format --check .
 uv run ruff check .
@@ -126,23 +126,24 @@ uv run pytest
 uv build
 ```
 
-Với integration test, khởi động PostgreSQL test bằng Compose/cơ chế của dự án, chạy migration lên database sạch rồi mới chạy test. Không được dùng database local chứa dữ liệu thật.
+Với integration test, khởi động PostgreSQL test bằng `server/scripts/test-postgres.ps1 start` (hoặc `docker compose -f server/compose.test.yaml up -d`), đặt `TEST_DATABASE_URL`, rồi chạy test; harness tự migrate database sạch. Không được dùng database local chứa dữ liệu thật.
 
 ### Hạ tầng và contract
 
 ```powershell
-docker compose -f infra/compose.yaml config
-docker compose -f infra/compose.yaml build
+Set-Location server
+docker compose -f compose.yaml config
+docker compose -f compose.yaml build
 ```
 
-Chạy lệnh export OpenAPI của dự án và xác nhận `contracts/public-api.openapi.yaml` cùng `contracts/device-api.openapi.yaml` không có diff ngoài chủ đích.
+Chạy `uv run python scripts/export_openapi.py --check` trong `server/` và xác nhận `contracts/public-api.openapi.yaml` cùng `contracts/device-api.openapi.yaml` không có diff ngoài chủ đích.
 
 ### Android
 
 Chạy Gradle wrapper thuộc repository, ưu tiên các task tương đương sau theo module thực tế:
 
 ```powershell
-Set-Location apps/android
+Set-Location mobile
 .\gradlew.bat test lint assembleDebug
 ```
 

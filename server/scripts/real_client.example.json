@@ -1,0 +1,8 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "public_bearer_token": "REPLACE_WITH_RAW_PUBLIC_API_TOKEN",
+  "device_id": "glasses-100",
+  "poll_timeout_seconds": 90,
+  "contact_name": "test",
+  "music_song": "Noi nay co anh - Son Tung M-TP"
+}

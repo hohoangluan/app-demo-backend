@@ -1,0 +1,77 @@
+name: Server CI
+
+on:
+  pull_request:
+    paths:
+      - "server/**"
+      - "contracts/**"
+      - ".github/workflows/server-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "contracts/**"
+      - ".github/workflows/server-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: app_demo_test
+          POSTGRES_USER: app_demo_test
+          POSTGRES_PASSWORD: app_demo_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_demo_test -d app_demo_test"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://app_demo_test:app_demo_test@127.0.0.1:55432/app_demo_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: server/uv.lock
+      - name: Install Python
+        run: uv python install
+      - name: Sync locked dependencies
+        run: uv sync --frozen
+      - name: Check formatting
+        run: uv run ruff format --check .
+      - name: Lint
+        run: uv run ruff check .
+      - name: Type-check
+        run: uv run mypy src tests scripts
+      - name: Migrate test database
+        run: DATABASE_URL="$TEST_DATABASE_URL" uv run alembic upgrade head
+      - name: Test
+        run: uv run pytest
+      - name: Check generated OpenAPI contracts
+        run: uv run python scripts/export_openapi.py --check
+      - name: Build package
+        run: uv build
+
+  container:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: cp .env.example .env && docker compose -f compose.yaml config --quiet
+      - name: Build server image
+        run: docker compose -f compose.yaml build backend

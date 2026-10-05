@@ -1,34 +1,20 @@
 # Repository instructions
 
-Before changing code:
+Read `claude.md` completely before changing code; its development and test rules
+are mandatory. Then read:
 
-1. Read `claude.md` completely; its development and test rules are mandatory.
-2. Read only the current-state, active-phase, blockers, and latest session-log
-   sections of `TASK_PLAN.md` first. Load older plan sections only when relevant.
-3. Use `project_context.md` as the contract source and `architeture.md` as the
-   implementation blueprint. Do not guess where they conflict.
-4. Check `CONTRACT_DECISIONS.md` before changing public/internal API behavior.
-   Entries marked `CHƯA CHỐT` are not approved decisions.
+- `docs/project-context.md`: the Public/Internal API contract.
+- `docs/architecture.md`: modules, dependency direction and request flow.
+- `server/README.md` or `mobile/README.md` for the part you touch.
 
 Keep dependencies in this direction:
 
 ```text
 api -> service -> repository -> PostgreSQL
-               -> adapter -> FCM / callback
+               -> adapter -> FCM / callback / Spotify
 worker -> service / repository / adapter
 ```
 
-For every behavior change, add or update tests and run the applicable quality
-gates from `claude.md`. PostgreSQL locking, JSONB, migration, lease, and race
-tests must use PostgreSQL rather than SQLite.
-
-Before ending a work session, update `TASK_PLAN.md` with checklist state,
-exact commands/results, blockers, and a concise session-log entry. Never mark a
-gate complete unless it actually ran successfully.
-
-## Parallel agents
-
-Another agent may be working on this repo at the same time, in a separate
-worktree. Read `AGENT_COORDINATION.md` before editing any file, and append your
-own status there before ending a session. It records worktree/branch ownership,
-per-file ownership, and requests addressed to the other agent.
+Every behavior change needs tests and the quality gates from `claude.md`.
+PostgreSQL locking, JSONB, migration, lease and race tests must run on
+PostgreSQL, never SQLite.

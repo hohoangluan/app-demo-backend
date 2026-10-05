@@ -8,7 +8,7 @@
 *adminsdk*.json
 *firebase-adminsdk*.json
 google-services.json
-apps/android/app/google-services.json
+mobile/app/google-services.json
 
 # Python
 __pycache__/
@@ -43,7 +43,6 @@ Thumbs.db
 *.log
 tmp/
 
-# test_real: manual External-API-Client run tooling (contains a raw bearer token + run artifacts)
-test_real/config.local.json
-test_real/results/
+# Real external-client run config (contains a raw bearer token)
+server/scripts/real_client.local.json
 .screenshots/

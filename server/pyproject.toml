@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling>=1.27.0,<2.0.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "app-demo-backend"
+version = "0.1.0"
+description = "App Communication Server prototype backend"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.14.0,<2.0.0",
+    "asyncpg>=0.30.0,<1.0.0",
+    "fastapi>=0.115.0,<1.0.0",
+    "firebase-admin>=6.5.0,<7.0.0",
+    "pydantic-settings>=2.7.0,<3.0.0",
+    "sqlalchemy[asyncio]>=2.0.36,<3.0.0",
+    "uvicorn[standard]>=0.34.0,<1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.0,<1.0.0",
+    "mypy>=1.15.0,<2.0.0",
+    "pytest>=8.3.0,<10.0.0",
+    "pytest-asyncio>=0.25.0,<2.0.0",
+    "pyyaml>=6.0.0,<7.0.0",
+    "ruff>=0.9.0,<1.0.0",
+    "types-PyYAML>=6.0.0,<7.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",
+    "CPY001",
+    "D203",
+    "D213",
+    "ISC001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["PLR2004", "S101", "S105", "S106"]
+"scripts/**/*.py" = ["T201"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests", "scripts"]
+show_error_codes = true
+pretty = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[[tool.mypy.overrides]]
+module = "firebase_admin.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+asyncio_mode = "auto"
+filterwarnings = ["error"]
+pythonpath = ["."]
+testpaths = ["tests"]

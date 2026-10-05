@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ── Phone & Contacts ─────────────────────────────────────────── -->
+    <!-- emergency_call, contact_call: dial/call phone number -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- Incoming calls: announce the caller to the glasses, answer or reject from them -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- emergency_call: send location SMS to the configured emergency contact -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- CALL_PHONE/SEND_SMS otherwise imply required telephony hardware (blocks ChromeOS/tablet installs) -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+    <!-- ── Audio ────────────────────────────────────────────────────── -->
+    <!-- music_volume: adjust media stream volume -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- ── Location ─────────────────────────────────────────────────── -->
+    <!-- navigation_start: pass current location to Google Maps -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- emergency_call runs from a background FCM push, not the foreground app;
+         without this, LocationManager silently returns no last-known fix there -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- ── Bluetooth LE: cấp Wi-Fi cho kính khi kính mất mạng ─────────── -->
+    <!-- Đường CỨU HỘ. Hai đường kia đều có một điều kiện không thoả đúng lúc
+         hỏng: qua máy chủ cần kính ĐANG online, qua SoftAP bắt người dùng RỜI
+         mạng của họ. BLE không đòi cái nào. Xem GlassesBleProvisioner.kt. -->
+
+    <!-- Android 12+ (API 31). `neverForLocation` là lời cam kết KHÔNG dùng kết
+         quả quét để suy ra vị trí — nhờ nó mà quét không phải xin quyền vị trí.
+         Bỏ thuộc tính này thì Android bắt xin ACCESS_FINE_LOCATION trở lại, và
+         người dùng thấy app hỏi vị trí để... đổi Wi-Fi cho kính. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="s" />
+
+    <!-- Android 6-11 (minSdk 24). Hai quyền cũ bị hệ thống thu hồi từ API 31,
+         nên chặn trần bằng maxSdkVersion — không chặn thì một số máy đòi quyền
+         không cần thiết. -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <!-- 🔴 Trên API 23-30, quét BLE THIẾU quyền vị trí thì startScan() chạy
+         bình thường và KHÔNG BAO GIỜ gọi callback nào — không lỗi, không log.
+         Nhìn từ ngoài giống hệt "kính không bật BLE". ACCESS_FINE_LOCATION đã
+         khai ở trên cho navigation_start, dùng chung. -->
+
+    <!-- Máy không có BLE vẫn cài được: mọi chức năng khác không cần nó, và hai
+         đường cấp Wi-Fi kia vẫn chạy. -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+
+    <!-- ── Overlay / Display ────────────────────────────────────────── -->
+    <!-- Lets background commands bring their target screen to the front -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- ── Network & Foreground Service ─────────────────────────────── -->
+    <!-- DeviceApiClient: HTTP calls to backend /register and /report -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- CommandExecutionService runs one pushed command to completion; Android 14+
+         requires the type-specific permission alongside the generic one -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Keeps high-priority FCM data messages from being delayed by Doze while screen is off -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Lets CommandLaunchActivity present itself over the lock screen from a background push -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!--
+        Android 11+ package visibility: without these, PackageManager.resolveActivity()
+        for Maps/Spotify/Grab returns null even when the app is installed, so
+        music_play, navigation_start and ride_quote/confirm would silently fall back
+        instead of opening the real app.
+    -->
+    <queries>
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.grabtaxi.passenger" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- navigation_start falls back to any map app via geo: when Google Maps is missing -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".YourEyesApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppDemo">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Transient trampoline shown by the full-screen-intent notification so a
+            background command can open its real target screen even over a locked
+            screen. No UI of its own — see NotificationLauncher.kt.
+        -->
+        <activity
+            android:name=".launch.CommandLaunchActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!--
+            FCM Receiver — receives push commands from backend via Firebase.
+        -->
+        <service
+            android:name=".command.FcmPushReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".telephony.PhoneStateBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Executes one pushed command. Handlers wait for the handset to confirm
+            the action really happened, so execution outlives the FCM receiver's
+            own grace period — see CommandExecutionService.kt.
+        -->
+        <service
+            android:name=".command.CommandExecutionService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
+
+        <!--
+            Empty listener whose only job is to make this app eligible for
+            MediaSessionManager.getActiveSessions(), which is what lets
+            music_play press play on Spotify's own session. The user has
+            to enable it under Settings > Notifications.
+        -->
+        <service
+            android:name=".service.MediaControlListenerService"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="appdemo_commands" />
+
+
+
+    </application>
+</manifest>

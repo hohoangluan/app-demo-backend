@@ -1,0 +1,146 @@
+"""PostgreSQL integration fixtures.
+
+``TEST_DATABASE_URL`` opts in (tests skip without it) and must name a database
+containing "test". Migrations run once per session via the ``alembic``
+console script; tests clean up by truncating mutable tables rather than
+rolling back one transaction, so concurrency tests on separate connections
+see each other's commits. The engine uses ``NullPool`` because each test gets
+its own event loop.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
+
+import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
+
+from app.database import build_session_factory
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Iterator
+
+    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+
+    from app.database import AsyncSessionFactory
+
+TEST_DATABASE_URL_ENV = "TEST_DATABASE_URL"
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
+
+class NonTestDatabaseUrlError(ValueError):
+    """Raised when a database URL does not look safe for integration tests."""
+
+
+def ensure_test_only_database_url(database_url: str) -> None:
+    """Reject a URL whose database name does not clearly look test-only.
+
+    The guard rule is deliberately simple and conservative: the database
+    name (the URL path component) must contain the substring ``"test"``
+    (case-insensitive). This accepts names such as ``app_demo_test`` or
+    ``myapp_test_db`` and rejects development/production-shaped names such
+    as ``app_demo`` or ``postgres``.
+    """
+    database_name = urlsplit(database_url).path.lstrip("/")
+    if "test" not in database_name.lower():
+        message = (
+            f"Refusing to run PostgreSQL integration tests against database "
+            f"{database_name!r}: the name does not contain 'test'. Point "
+            f"{TEST_DATABASE_URL_ENV} at a disposable test-only database "
+            "(see server/README.md)."
+        )
+        raise NonTestDatabaseUrlError(message)
+
+
+def _read_test_database_url() -> str:
+    """Read ``TEST_DATABASE_URL``, skip when unset, and validate when set."""
+    database_url = os.environ.get(TEST_DATABASE_URL_ENV)
+    if not database_url:
+        pytest.skip(
+            f"{TEST_DATABASE_URL_ENV} is not set; PostgreSQL integration tests "
+            "are opt-in. See server/README.md to start the disposable "
+            f"test database and set {TEST_DATABASE_URL_ENV} to run this test."
+        )
+    ensure_test_only_database_url(database_url)
+    return database_url
+
+
+@pytest.fixture(scope="session")
+def test_database_url() -> str:
+    """Return the validated, opt-in PostgreSQL integration-test database URL."""
+    return _read_test_database_url()
+
+
+def _alembic_executable() -> Path:
+    """Return the ``alembic`` console script next to this interpreter.
+
+    The local ``alembic/`` migrations package shadows the installed library
+    inside pytest's ``sys.path``, so migrations run as a subprocess.
+    """
+    suffix = ".exe" if sys.platform == "win32" else ""
+    return Path(sys.executable).with_name(f"alembic{suffix}")
+
+
+def _run_migrations(database_url: str) -> None:
+    """Apply the checked-in migration via the existing alembic/env.py mechanism."""
+    env = {**os.environ, "DATABASE_URL": database_url}
+    result = subprocess.run(  # noqa: S603
+        [str(_alembic_executable()), "upgrade", "head"],
+        cwd=_BACKEND_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = (
+            "alembic upgrade head failed for the PostgreSQL integration-test "
+            f"database:\n{result.stdout}\n{result.stderr}"
+        )
+        raise RuntimeError(message)
+
+
+@pytest.fixture(scope="session")
+def postgres_engine(test_database_url: str) -> Iterator[AsyncEngine]:
+    """Provide one migrated, session-scoped engine shared by every test.
+
+    See the module docstring for why migrations run once per session and
+    why the engine is built with ``NullPool``.
+    """
+    _run_migrations(test_database_url)
+    engine = create_async_engine(test_database_url, poolclass=NullPool)
+    try:
+        yield engine
+    finally:
+        asyncio.run(engine.dispose())
+
+
+@pytest.fixture(scope="session")
+def postgres_session_factory(postgres_engine: AsyncEngine) -> AsyncSessionFactory:
+    """Build the session factory bound to the shared integration-test engine."""
+    return build_session_factory(postgres_engine)
+
+
+async def _truncate_mutable_tables(engine: AsyncEngine) -> None:
+    """Clear rows written by a test without dropping or re-migrating the schema."""
+    async with engine.begin() as connection:
+        await connection.execute(text("TRUNCATE TABLE operations, devices, glasses_devices"))
+
+
+@pytest.fixture
+async def db_session(
+    postgres_engine: AsyncEngine,
+    postgres_session_factory: AsyncSessionFactory,
+) -> AsyncIterator[AsyncSession]:
+    """Yield a session for one test and truncate mutable tables afterward."""
+    async with postgres_session_factory() as session:
+        yield session
+    await _truncate_mutable_tables(postgres_engine)
